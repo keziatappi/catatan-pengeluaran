@@ -33,14 +33,20 @@ interface Account {
   balance: number;
 }
 
-function getCardBrand(name: string) {
+function getCardBrand(name: string, type?: string) {
   const lowercaseName = name.toLowerCase();
+  
   if (lowercaseName.includes('bni')) {
     return {
       gradient: 'linear-gradient(135deg, #005e6a, #008f9c)',
       subtitle: 'BNI Taplus Debit',
       cardNumber: '4358 0928 4429 2323',
       expiry: '08/29',
+      logo: (
+        <div style={{ display: 'flex', alignItems: 'center', fontWeight: '900', fontStyle: 'italic', fontSize: '16px', color: '#ff6600', letterSpacing: '-0.5px' }}>
+          <span style={{ color: '#005e6a', background: '#ffffff', padding: '1px 5px', borderRadius: '3px', fontStyle: 'normal', fontSize: '12px', marginRight: '4px', fontWeight: 'bold' }}>BNI</span>
+        </div>
+      )
     };
   }
   if (lowercaseName.includes('mandiri')) {
@@ -49,6 +55,12 @@ function getCardBrand(name: string) {
       subtitle: 'Mandiri Gold Debit',
       cardNumber: '5412 8820 0968 4122',
       expiry: '11/28',
+      logo: (
+        <div style={{ display: 'flex', alignItems: 'center', gap: 3, fontWeight: 'bold', fontSize: '15px', color: '#ffffff', letterSpacing: '-0.5px' }}>
+          <span style={{ color: '#ffc72c', fontSize: '14px' }}>❖</span>
+          <span>mandiri</span>
+        </div>
+      )
     };
   }
   if (lowercaseName.includes('bri')) {
@@ -57,6 +69,11 @@ function getCardBrand(name: string) {
       subtitle: 'BRI BritAma Debit',
       cardNumber: '6011 4455 0968 1083',
       expiry: '04/30',
+      logo: (
+        <div style={{ display: 'flex', alignItems: 'center', fontWeight: '900', fontStyle: 'italic', fontSize: '16px', color: '#ffffff', letterSpacing: '-0.5px' }}>
+          <span style={{ color: '#00529c', background: '#ffffff', padding: '1px 5px', borderRadius: '3px', fontStyle: 'normal', fontSize: '12px', marginRight: '4px', fontWeight: 'bold' }}>BRI</span>
+        </div>
+      )
     };
   }
   if (lowercaseName.includes('gopay')) {
@@ -65,6 +82,11 @@ function getCardBrand(name: string) {
       subtitle: 'GoPay E-Wallet',
       cardNumber: '0812-3456-7890',
       expiry: 'PERMANENT',
+      logo: (
+        <div style={{ display: 'flex', alignItems: 'center', fontWeight: '800', fontSize: '16px', color: '#ffffff', letterSpacing: '-0.5px' }}>
+          <span style={{ color: '#00aed6' }}>go</span><span>pay</span>
+        </div>
+      )
     };
   }
   if (lowercaseName.includes('shopeepay')) {
@@ -73,13 +95,48 @@ function getCardBrand(name: string) {
       subtitle: 'ShopeePay E-Wallet',
       cardNumber: '0812-9876-5432',
       expiry: 'PERMANENT',
+      logo: (
+        <div style={{ display: 'flex', alignItems: 'center', gap: 4, fontWeight: 'bold', fontSize: '14px', color: '#ffffff' }}>
+          <span style={{ background: '#ffffff', color: '#ee4d2d', padding: '0px 4px', borderRadius: '3px', fontSize: '10px', fontWeight: '900' }}>S</span>
+          <span>ShopeePay</span>
+        </div>
+      )
     };
   }
+  if (lowercaseName.includes('tunai') || type === 'cash') {
+    return {
+      gradient: 'linear-gradient(135deg, #059669, #10b981)',
+      subtitle: 'Dompet Tunai',
+      cardNumber: 'CASH-ID-4820-1992',
+      expiry: 'NO EXPIRY',
+      logo: (
+        <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontWeight: 'bold', fontSize: '15px', color: '#ffffff' }}>
+          <span>💵</span>
+          <span style={{ letterSpacing: '0.05em' }}>TUNAI</span>
+        </div>
+      )
+    };
+  }
+  
+  // Custom Dynamic Card layout based on account type
+  const isBank = type === 'bank';
+  const isWallet = type === 'e-wallet';
+  
   return {
-    gradient: 'linear-gradient(135deg, #059669, #10b981)',
-    subtitle: 'Dompet Tunai',
-    cardNumber: 'CASH-ID-4820-1992',
-    expiry: 'NO EXPIRY',
+    gradient: isBank 
+      ? 'linear-gradient(135deg, #3b82f6, #1d4ed8)'
+      : isWallet
+        ? 'linear-gradient(135deg, #8b5cf6, #6d28d9)'
+        : 'linear-gradient(135deg, #64748b, #475569)',
+    subtitle: isBank ? 'Rekening Bank' : isWallet ? 'Dompet Digital' : 'Dompet Tunai',
+    cardNumber: '•••• •••• •••• 9924',
+    expiry: '12/30',
+    logo: (
+      <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontWeight: 'bold', fontSize: '15px', color: '#ffffff' }}>
+        <span>{isBank ? '🏦' : isWallet ? '📱' : '💳'}</span>
+        <span style={{ textTransform: 'uppercase', letterSpacing: '0.05em' }}>{name}</span>
+      </div>
+    )
   };
 }
 
@@ -272,7 +329,7 @@ export default function DashboardPage() {
                     const scale = 1 - relativeIndex * 0.05;
                     const opacity = relativeIndex === 0 ? 1 : relativeIndex === 1 ? 0.85 : relativeIndex === 2 ? 0.6 : 0;
                     
-                    const brand = getCardBrand(account.name);
+                    const brand = getCardBrand(account.name, account.type);
                     
                     return (
                       <div
@@ -291,7 +348,12 @@ export default function DashboardPage() {
                         }}
                       >
                         <div className="card-top">
-                          <span className="card-label">{brand.subtitle}</span>
+                          <div>
+                            {brand.logo}
+                            <div style={{ fontSize: '10px', opacity: 0.7, marginTop: 4, letterSpacing: '0.05em', textTransform: 'uppercase' }}>
+                              {brand.subtitle}
+                            </div>
+                          </div>
                           <button
                             className="card-plus-btn"
                             onClick={(e) => {
@@ -359,7 +421,7 @@ export default function DashboardPage() {
                     <div className="details-row">
                       <span className="details-label">Nomor Rekening/ID</span>
                       <span className="details-value" style={{ fontFamily: 'monospace' }}>
-                        {getCardBrand(accounts[activeCardIndex].name).cardNumber}
+                        {getCardBrand(accounts[activeCardIndex].name, accounts[activeCardIndex].type).cardNumber}
                       </span>
                     </div>
                   </div>
