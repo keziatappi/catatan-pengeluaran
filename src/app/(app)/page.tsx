@@ -30,17 +30,18 @@ interface Account {
   id: number;
   name: string;
   type: string;
+  accountNumber?: string | null;
   balance: number;
 }
 
-function getCardBrand(name: string, type?: string) {
+function getCardBrand(name: string, type?: string, accountNumber?: string | null) {
   const lowercaseName = name.toLowerCase();
   
   if (lowercaseName.includes('bni')) {
     return {
       gradient: 'linear-gradient(135deg, #005e6a, #008f9c)',
       subtitle: 'BNI Taplus Debit',
-      cardNumber: '4358 0928 4429 2323',
+      cardNumber: accountNumber || '4358 0928 4429 2323',
       expiry: '08/29',
       logo: (
         <div style={{ display: 'flex', alignItems: 'center', fontWeight: '900', fontStyle: 'italic', fontSize: '16px', color: '#ff6600', letterSpacing: '-0.5px' }}>
@@ -53,7 +54,7 @@ function getCardBrand(name: string, type?: string) {
     return {
       gradient: 'linear-gradient(135deg, #1c355e, #2e5590)',
       subtitle: 'Mandiri Gold Debit',
-      cardNumber: '5412 8820 0968 4122',
+      cardNumber: accountNumber || '5412 8820 0968 4122',
       expiry: '11/28',
       logo: (
         <div style={{ display: 'flex', alignItems: 'center', gap: 3, fontWeight: 'bold', fontSize: '15px', color: '#ffffff', letterSpacing: '-0.5px' }}>
@@ -67,7 +68,7 @@ function getCardBrand(name: string, type?: string) {
     return {
       gradient: 'linear-gradient(135deg, #0f4c81, #1e70b8)',
       subtitle: 'BRI BritAma Debit',
-      cardNumber: '6011 4455 0968 1083',
+      cardNumber: accountNumber || '6011 4455 0968 1083',
       expiry: '04/30',
       logo: (
         <div style={{ display: 'flex', alignItems: 'center', fontWeight: '900', fontStyle: 'italic', fontSize: '16px', color: '#ffffff', letterSpacing: '-0.5px' }}>
@@ -80,7 +81,7 @@ function getCardBrand(name: string, type?: string) {
     return {
       gradient: 'linear-gradient(135deg, #00aed6, #00c1e8)',
       subtitle: 'GoPay E-Wallet',
-      cardNumber: '0812-3456-7890',
+      cardNumber: accountNumber || '0812-3456-7890',
       expiry: 'PERMANENT',
       logo: (
         <div style={{ display: 'flex', alignItems: 'center', fontWeight: '800', fontSize: '16px', color: '#ffffff', letterSpacing: '-0.5px' }}>
@@ -93,7 +94,7 @@ function getCardBrand(name: string, type?: string) {
     return {
       gradient: 'linear-gradient(135deg, #ee4d2d, #f1684c)',
       subtitle: 'ShopeePay E-Wallet',
-      cardNumber: '0812-9876-5432',
+      cardNumber: accountNumber || '0812-9876-5432',
       expiry: 'PERMANENT',
       logo: (
         <div style={{ display: 'flex', alignItems: 'center', gap: 4, fontWeight: 'bold', fontSize: '14px', color: '#ffffff' }}>
@@ -107,7 +108,7 @@ function getCardBrand(name: string, type?: string) {
     return {
       gradient: 'linear-gradient(135deg, #059669, #10b981)',
       subtitle: 'Dompet Tunai',
-      cardNumber: 'CASH-ID-4820-1992',
+      cardNumber: accountNumber || 'CASH-ID-4820-1992',
       expiry: 'NO EXPIRY',
       logo: (
         <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontWeight: 'bold', fontSize: '15px', color: '#ffffff' }}>
@@ -129,7 +130,7 @@ function getCardBrand(name: string, type?: string) {
         ? 'linear-gradient(135deg, #8b5cf6, #6d28d9)'
         : 'linear-gradient(135deg, #64748b, #475569)',
     subtitle: isBank ? 'Rekening Bank' : isWallet ? 'Dompet Digital' : 'Dompet Tunai',
-    cardNumber: '•••• •••• •••• 9924',
+    cardNumber: accountNumber || '•••• •••• •••• 9924',
     expiry: '12/30',
     logo: (
       <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontWeight: 'bold', fontSize: '15px', color: '#ffffff' }}>
@@ -155,6 +156,7 @@ export default function DashboardPage() {
   const [showAccountForm, setShowAccountForm] = useState(false);
   const [newAccountName, setNewAccountName] = useState('');
   const [newAccountType, setNewAccountType] = useState<'bank' | 'e-wallet' | 'cash'>('bank');
+  const [newAccountNumber, setNewAccountNumber] = useState('');
   const [accountError, setAccountError] = useState('');
   const [accountLoading, setAccountLoading] = useState(false);
 
@@ -173,6 +175,7 @@ export default function DashboardPage() {
         body: JSON.stringify({
           name: newAccountName.trim(),
           type: newAccountType,
+          accountNumber: newAccountNumber.trim() || null,
         }),
       });
 
@@ -199,6 +202,7 @@ export default function DashboardPage() {
 
       setNewAccountName('');
       setNewAccountType('bank');
+      setNewAccountNumber('');
       setShowAccountForm(false);
     } catch (err: any) {
       setAccountError(err.message || 'Terjadi kesalahan');
@@ -329,7 +333,7 @@ export default function DashboardPage() {
                     const scale = 1 - relativeIndex * 0.05;
                     const opacity = relativeIndex === 0 ? 1 : relativeIndex === 1 ? 0.85 : relativeIndex === 2 ? 0.6 : 0;
                     
-                    const brand = getCardBrand(account.name, account.type);
+                    const brand = getCardBrand(account.name, account.type, account.accountNumber);
                     
                     return (
                       <div
@@ -421,7 +425,7 @@ export default function DashboardPage() {
                     <div className="details-row">
                       <span className="details-label">Nomor Rekening/ID</span>
                       <span className="details-value" style={{ fontFamily: 'monospace' }}>
-                        {getCardBrand(accounts[activeCardIndex].name, accounts[activeCardIndex].type).cardNumber}
+                        {getCardBrand(accounts[activeCardIndex].name, accounts[activeCardIndex].type, accounts[activeCardIndex].accountNumber).cardNumber}
                       </span>
                     </div>
                   </div>
@@ -501,6 +505,17 @@ export default function DashboardPage() {
                   <option value="e-wallet">📱 E-Wallet</option>
                   <option value="cash">💵 Tunai / Cash</option>
                 </select>
+              </div>
+
+              <div className="form-group">
+                <label className="form-label">Nomor Rekening / E-Wallet (opsional)</label>
+                <input
+                  type="text"
+                  className="form-input"
+                  placeholder={newAccountType === 'bank' ? 'Contoh: 0928442923' : newAccountType === 'e-wallet' ? 'Contoh: 081234567890' : 'Contoh: ID-1992'}
+                  value={newAccountNumber}
+                  onChange={(e) => setNewAccountNumber(e.target.value)}
+                />
               </div>
             </div>
             

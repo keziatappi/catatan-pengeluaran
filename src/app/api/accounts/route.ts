@@ -73,6 +73,7 @@ export async function GET(request: NextRequest) {
         id: account.id,
         name: account.name,
         type: account.type,
+        accountNumber: account.accountNumber,
         balance: incomeSum - expenseSum,
       };
     });
@@ -92,7 +93,7 @@ export async function POST(request: NextRequest) {
 
   try {
     const body = await request.json();
-    const { name, type } = body;
+    const { name, type, accountNumber } = body;
 
     if (!name || !type) {
       return NextResponse.json(
@@ -112,6 +113,7 @@ export async function POST(request: NextRequest) {
       userId,
       name,
       type,
+      accountNumber: accountNumber || null,
     }).returning();
 
     return NextResponse.json(result[0], { status: 201 });

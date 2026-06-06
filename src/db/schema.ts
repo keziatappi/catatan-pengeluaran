@@ -23,6 +23,7 @@ export const accounts = pgTable('accounts', {
   userId: integer('user_id').references(() => users.id).notNull(),
   name: varchar('name', { length: 100 }).notNull(),
   type: varchar('type', { length: 50 }).notNull(), // 'bank', 'e-wallet', 'cash'
+  accountNumber: varchar('account_number', { length: 50 }),
   createdAt: timestamp('created_at').defaultNow().notNull(),
 });
 
