@@ -72,7 +72,6 @@ export default function Sidebar() {
           ☰
         </button>
         <div className="sidebar-logo">
-          <span className="sidebar-logo-icon">💰</span>
           <span className="sidebar-logo-text">DompetKu</span>
         </div>
         <button
@@ -95,7 +94,6 @@ export default function Sidebar() {
       <aside className={`sidebar ${isOpen ? 'open' : ''}`}>
         <div className="sidebar-header">
           <div className="sidebar-logo">
-            <div className="sidebar-logo-icon">💰</div>
             <div>
               <div className="sidebar-logo-text">DompetKu</div>
               <div className="sidebar-logo-sub">Catatan Keuangan</div>

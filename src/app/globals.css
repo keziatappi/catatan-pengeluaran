@@ -3,40 +3,40 @@
 /* ===== CSS VARIABLES / DESIGN TOKENS ===== */
 :root {
   color-scheme: dark;
-  --bg-primary: #06060b;
-  --bg-secondary: #0d0d14;
-  --bg-card: rgba(255, 255, 255, 0.03);
-  --bg-card-hover: rgba(255, 255, 255, 0.06);
-  --bg-glass: rgba(255, 255, 255, 0.04);
-  --bg-input: rgba(255, 255, 255, 0.05);
-  --bg-input-focus: rgba(255, 255, 255, 0.08);
+  --bg-primary: #0f172a; /* Slate 900 - simple clean dark */
+  --bg-secondary: #1e293b; /* Slate 800 */
+  --bg-card: #1e293b; /* Slate 800 */
+  --bg-card-hover: #334155; /* Slate 700 */
+  --bg-glass: #1e293b;
+  --bg-input: #334155; /* Slate 700 */
+  --bg-input-focus: #475569; /* Slate 600 */
 
-  --border-color: rgba(255, 255, 255, 0.06);
-  --border-color-hover: rgba(255, 255, 255, 0.12);
-  --border-color-focus: rgba(56, 189, 248, 0.5);
+  --border-color: #334155; /* Slate 700 */
+  --border-color-hover: #475569; /* Slate 600 */
+  --border-color-focus: #38bdf8;
 
-  --text-primary: #f1f1f4;
-  --text-secondary: #8b8d9e;
-  --text-tertiary: #5a5c6f;
-  --text-inverse: #06060b;
+  --text-primary: #f8fafc; /* Slate 50 */
+  --text-secondary: #94a3b8; /* Slate 400 */
+  --text-tertiary: #64748b; /* Slate 500 */
+  --text-inverse: #0f172a;
 
   --accent-primary: #38bdf8; /* Baby Blue */
-  --accent-primary-hover: #5ad0ff;
-  --accent-primary-glow: rgba(56, 189, 248, 0.15);
+  --accent-primary-hover: #0ea5e9;
+  --accent-primary-glow: rgba(56, 189, 248, 0.1);
 
   --color-income: #22c55e;
-  --color-income-bg: rgba(34, 197, 94, 0.1);
-  --color-income-border: rgba(34, 197, 94, 0.2);
-  --color-income-glow: rgba(34, 197, 94, 0.15);
+  --color-income-bg: rgba(34, 197, 94, 0.08);
+  --color-income-border: rgba(34, 197, 94, 0.15);
+  --color-income-glow: rgba(34, 197, 94, 0.1);
 
   --color-expense: #ef4444;
-  --color-expense-bg: rgba(239, 68, 68, 0.1);
-  --color-expense-border: rgba(239, 68, 68, 0.2);
-  --color-expense-glow: rgba(239, 68, 68, 0.15);
+  --color-expense-bg: rgba(239, 68, 68, 0.08);
+  --color-expense-border: rgba(239, 68, 68, 0.15);
+  --color-expense-glow: rgba(239, 68, 68, 0.1);
 
   --color-balance: #38bdf8;
-  --color-balance-bg: rgba(56, 189, 248, 0.1);
-  --color-balance-border: rgba(56, 189, 248, 0.2);
+  --color-balance-bg: rgba(56, 189, 248, 0.08);
+  --color-balance-border: rgba(56, 189, 248, 0.15);
 
   --color-warning: #f59e0b;
   --color-danger: #ef4444;
@@ -47,33 +47,33 @@
   --radius-xl: 20px;
   --radius-full: 9999px;
 
-  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.3);
-  --shadow-md: 0 4px 12px rgba(0, 0, 0, 0.4);
-  --shadow-lg: 0 8px 32px rgba(0, 0, 0, 0.5);
-  --shadow-glow: 0 0 40px rgba(56, 189, 248, 0.08);
+  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.1);
+  --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -2px rgba(0, 0, 0, 0.1);
+  --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -4px rgba(0, 0, 0, 0.1);
+  --shadow-glow: none; /* simple flat design */
 
   --sidebar-width: 260px;
   --header-height: 72px;
 
-  --transition-fast: 150ms cubic-bezier(0.4, 0, 0.2, 1);
-  --transition-normal: 250ms cubic-bezier(0.4, 0, 0.2, 1);
-  --transition-slow: 350ms cubic-bezier(0.4, 0, 0.2, 1);
+  --transition-fast: 120ms ease;
+  --transition-normal: 200ms ease;
+  --transition-slow: 300ms ease;
 
   --font-family: 'Inter', -apple-system, BlinkMacSystemFont, system-ui, sans-serif;
 }
 
 :root.light {
   color-scheme: light;
-  --bg-primary: #f5f7fb;
-  --bg-secondary: #ffffff;
-  --bg-card: rgba(0, 0, 0, 0.02);
-  --bg-card-hover: rgba(0, 0, 0, 0.04);
-  --bg-glass: rgba(255, 255, 255, 0.6);
+  --bg-primary: #f8fafc; /* Slate 50 - simple clean light */
+  --bg-secondary: #ffffff; /* White */
+  --bg-card: #ffffff; /* White */
+  --bg-card-hover: #f1f5f9; /* Slate 100 */
+  --bg-glass: #ffffff;
   --bg-input: #f1f5f9;
-  --bg-input-focus: #e2e8f0;
+  --bg-input-focus: #cbd5e1;
 
-  --border-color: rgba(0, 0, 0, 0.08);
-  --border-color-hover: rgba(0, 0, 0, 0.15);
+  --border-color: #e2e8f0; /* Slate 200 */
+  --border-color-hover: #cbd5e1; /* Slate 300 */
   --border-color-focus: rgba(14, 165, 233, 0.5);
 
   --text-primary: #0f172a;
@@ -86,23 +86,23 @@
   --accent-primary-glow: rgba(14, 165, 233, 0.1);
 
   --color-income: #16a34a;
-  --color-income-bg: rgba(22, 163, 74, 0.08);
-  --color-income-border: rgba(22, 163, 74, 0.15);
-  --color-income-glow: rgba(22, 163, 74, 0.1);
+  --color-income-bg: rgba(22, 163, 74, 0.06);
+  --color-income-border: rgba(22, 163, 74, 0.12);
+  --color-income-glow: rgba(22, 163, 74, 0.05);
 
   --color-expense: #dc2626;
-  --color-expense-bg: rgba(220, 38, 38, 0.08);
-  --color-expense-border: rgba(220, 38, 38, 0.15);
-  --color-expense-glow: rgba(220, 38, 38, 0.1);
+  --color-expense-bg: rgba(220, 38, 38, 0.06);
+  --color-expense-border: rgba(220, 38, 38, 0.12);
+  --color-expense-glow: rgba(220, 38, 38, 0.05);
 
   --color-balance: #0ea5e9;
-  --color-balance-bg: rgba(14, 165, 233, 0.08);
-  --color-balance-border: rgba(14, 165, 233, 0.15);
+  --color-balance-bg: rgba(14, 165, 233, 0.06);
+  --color-balance-border: rgba(14, 165, 233, 0.12);
 
   --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.05);
-  --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -2px rgba(0, 0, 0, 0.1);
-  --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -4px rgba(0, 0, 0, 0.1);
-  --shadow-glow: 0 0 40px rgba(14, 165, 233, 0.04);
+  --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -2px rgba(0, 0, 0, 0.05);
+  --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.05), 0 4px 6px -4px rgba(0, 0, 0, 0.05);
+  --shadow-glow: none;
 }
 
 /* ===== RESET ===== */
@@ -381,9 +381,8 @@ ul, ol {
   display: none;
   position: fixed;
   inset: 0;
-  background: rgba(0, 0, 0, 0.6);
+  background: rgba(0, 0, 0, 0.5);
   z-index: 99;
-  backdrop-filter: blur(4px);
 }
 
 .mobile-overlay.active {
@@ -396,8 +395,7 @@ ul, ol {
   border: 1px solid var(--border-color);
   border-radius: var(--radius-lg);
   padding: 24px;
-  transition: all var(--transition-normal);
-  backdrop-filter: blur(20px);
+  transition: all var(--transition-fast);
 }
 
 .card:hover {
@@ -405,9 +403,7 @@ ul, ol {
 }
 
 .card-glass {
-  background: var(--bg-glass);
-  backdrop-filter: blur(24px);
-  -webkit-backdrop-filter: blur(24px);
+  background: var(--bg-secondary);
 }
 
 /* ===== SUMMARY CARDS ===== */
@@ -1140,10 +1136,7 @@ ul, ol {
 }
 
 .login-bg-orb {
-  position: absolute;
-  border-radius: 50%;
-  filter: blur(100px);
-  opacity: 0.15;
+  display: none;
 }
 
 .login-bg-orb-1 {
