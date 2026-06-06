@@ -129,7 +129,7 @@ export default function Sidebar() {
         
         {/* Top Logo (Floating above the sidebar rail) */}
         <div className="sidebar-logo-floating">
-          <Image src="/favicon.ico" alt="DompetKu" width={30} height={30} style={{ borderRadius: '8px', marginRight: '8px' }} />
+          <Image src="/favicon.ico" alt="DompetKu" width={30} height={30} style={{ borderRadius: '8px' }} />
           <span className="sidebar-logo-text-floating">DompetKu</span>
         </div>
 
@@ -148,6 +148,7 @@ export default function Sidebar() {
                 title={item.label}
               >
                 {item.icon}
+                <span className="sidebar-nav-label">{item.label}</span>
               </button>
             );
           })}

@@ -374,7 +374,7 @@ export default function DashboardPage() {
             
             {/* Top Greeting & Search */}
             <div className="greeting-row" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', width: '100%', marginBottom: '16px' }}>
-              <div className="search-payment-wrapper" style={{ margin: '0 auto 0 80px', width: '100%', maxWidth: '380px' }}>
+              <div className="search-payment-wrapper" style={{ width: '100%', maxWidth: '380px' }}>
                 <span className="search-payment-icon">
                   <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" style={{ opacity: 0.6 }}>
                     <circle cx="11" cy="11" r="8" />
