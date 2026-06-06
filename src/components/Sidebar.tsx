@@ -14,6 +14,7 @@ export default function Sidebar() {
   const router = useRouter();
   const [user, setUser] = useState<UserInfo | null>(null);
   const [isOpen, setIsOpen] = useState(false);
+  const [theme, setTheme] = useState<'dark' | 'light'>('dark');
 
   useEffect(() => {
     fetch('/api/auth/me')
@@ -22,7 +23,27 @@ export default function Sidebar() {
         if (data.user) setUser(data.user);
       })
       .catch(() => {});
+
+    // Theme initialization
+    const savedTheme = localStorage.getItem('theme') as 'dark' | 'light' || 'dark';
+    setTheme(savedTheme);
+    if (savedTheme === 'light') {
+      document.documentElement.classList.add('light');
+    } else {
+      document.documentElement.classList.remove('light');
+    }
   }, []);
+
+  const toggleTheme = () => {
+    const nextTheme = theme === 'dark' ? 'light' : 'dark';
+    setTheme(nextTheme);
+    localStorage.setItem('theme', nextTheme);
+    if (nextTheme === 'light') {
+      document.documentElement.classList.add('light');
+    } else {
+      document.documentElement.classList.remove('light');
+    }
+  };
 
   const handleLogout = async () => {
     await fetch('/api/auth/logout', { method: 'POST' });
@@ -54,7 +75,14 @@ export default function Sidebar() {
           <span className="sidebar-logo-icon">💰</span>
           <span className="sidebar-logo-text">DompetKu</span>
         </div>
-        <div style={{ width: 40 }} />
+        <button
+          className="theme-toggle-btn"
+          onClick={toggleTheme}
+          style={{ fontSize: 20, padding: 8 }}
+          title={theme === 'dark' ? 'Mode Terang' : 'Mode Gelap'}
+        >
+          {theme === 'dark' ? '☀️' : '🌙'}
+        </button>
       </div>
 
       {/* Mobile Overlay */}
@@ -89,6 +117,16 @@ export default function Sidebar() {
               {item.label}
             </button>
           ))}
+
+          {/* Theme Toggle Button inside Sidebar */}
+          <button
+            className="sidebar-nav-item"
+            onClick={toggleTheme}
+            style={{ width: '100%', textAlign: 'left', marginTop: 'auto' }}
+          >
+            <span className="sidebar-nav-icon">{theme === 'dark' ? '☀️' : '🌙'}</span>
+            {theme === 'dark' ? 'Mode Terang' : 'Mode Gelap'}
+          </button>
         </nav>
 
         <div className="sidebar-footer">
