@@ -2035,5 +2035,211 @@ input[type="date"]::-webkit-calendar-picker-indicator {
   color: var(--text-primary);
 }
 
+/* ===== GLASSMORPHISM MODAL POPUP STYLING ===== */
+.glass-modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(15, 23, 42, 0.4);
+  backdrop-filter: blur(12px) saturate(180%);
+  -webkit-backdrop-filter: blur(12px) saturate(180%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1100;
+  opacity: 0;
+  animation: fadeIn var(--transition-normal) forwards;
+  padding: 20px;
+}
+
+.glass-modal-container {
+  width: 100%;
+  max-width: 440px;
+  background: rgba(30, 41, 59, 0.45);
+  backdrop-filter: blur(25px);
+  -webkit-backdrop-filter: blur(25px);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 40px;
+  color: #ffffff;
+  padding: 32px 28px;
+  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5),
+              inset 0 1px 0 rgba(255, 255, 255, 0.1);
+  transform: translateY(30px) scale(0.95);
+  animation: slideUp var(--transition-normal) forwards;
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+  position: relative;
+}
+
+:root.light .glass-modal-container {
+  background: rgba(255, 255, 255, 0.45);
+  border: 1px solid rgba(0, 0, 0, 0.08);
+  color: #0f172a;
+  box-shadow: 0 25px 50px -12px rgba(15, 23, 42, 0.15),
+              inset 0 1px 0 rgba(255, 255, 255, 0.4);
+}
+
+.glass-modal-close {
+  position: absolute;
+  top: 24px;
+  right: 24px;
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.1);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  color: #ffffff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 14px;
+  cursor: pointer;
+  transition: all var(--transition-fast);
+  z-index: 10;
+}
+
+:root.light .glass-modal-close {
+  background: rgba(0, 0, 0, 0.05);
+  border-color: rgba(0, 0, 0, 0.05);
+  color: #0f172a;
+}
+
+.glass-modal-close:hover {
+  background: rgba(255, 255, 255, 0.2);
+  transform: scale(1.05);
+}
+
+:root.light .glass-modal-close:hover {
+  background: rgba(0, 0, 0, 0.1);
+}
+
+.glass-tx-list {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.glass-tx-item {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 8px 0;
+}
+
+.glass-tx-icon {
+  width: 46px;
+  height: 46px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.05);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 20px;
+  flex-shrink: 0;
+}
+
+:root.light .glass-tx-icon {
+  background: rgba(0, 0, 0, 0.04);
+  border-color: rgba(0, 0, 0, 0.02);
+}
+
+.glass-tx-info {
+  flex: 1;
+  min-width: 0;
+}
+
+.glass-tx-name {
+  font-size: 15px;
+  font-weight: 600;
+  color: inherit;
+  margin-bottom: 2px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.glass-tx-date {
+  font-size: 11px;
+  opacity: 0.6;
+}
+
+.glass-tx-amount {
+  font-size: 15px;
+  font-weight: 700;
+  text-align: right;
+}
+
+.glass-tx-amount.expense {
+  color: #ef4444;
+}
+
+:root.light .glass-tx-amount.expense {
+  color: #dc2626;
+}
+
+.glass-tx-amount.income {
+  color: #22c55e;
+}
+
+:root.light .glass-tx-amount.income {
+  color: #16a34a;
+}
+
+/* Glass Widgets */
+.glass-widgets-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+  margin-top: 12px;
+}
+
+.glass-widget {
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.04);
+  border-radius: 24px;
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+:root.light .glass-widget {
+  background: rgba(0, 0, 0, 0.03);
+  border-color: rgba(0, 0, 0, 0.02);
+}
+
+.glass-widget-title {
+  font-size: 14px;
+  font-weight: 600;
+  color: inherit;
+}
+
+.glass-widget-desc {
+  font-size: 10px;
+  opacity: 0.6;
+  line-height: 1.4;
+}
+
+.glass-avatars-row {
+  display: flex;
+  align-items: center;
+  margin-top: 6px;
+}
+
+.glass-avatar {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  border: 2px solid rgba(30, 41, 59, 0.8);
+  margin-right: -8px;
+  object-fit: cover;
+}
+
+:root.light .glass-avatar {
+  border-color: rgba(255, 255, 255, 0.8);
+}
+
+
 
 

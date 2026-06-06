@@ -53,6 +53,7 @@ export default function Sidebar() {
   const navItems = [
     { path: '/', label: 'Dashboard', icon: '📊' },
     { path: '/transactions', label: 'Transaksi', icon: '💳' },
+    { path: '/accounts', label: 'Rekening', icon: '🏦' },
   ];
 
   const getInitials = (name: string) => {

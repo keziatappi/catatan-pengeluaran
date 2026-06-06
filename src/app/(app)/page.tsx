@@ -152,6 +152,43 @@ export default function DashboardPage() {
   const [showScanner, setShowScanner] = useState(false);
   const [loading, setLoading] = useState(true);
 
+  // States untuk popup Glassmorphism
+  const [showCardPopup, setShowCardPopup] = useState(false);
+  const [popupTransactions, setPopupTransactions] = useState<any[]>([]);
+  const [popupLoading, setPopupLoading] = useState(false);
+  const [selectedPopupAccount, setSelectedPopupAccount] = useState<Account | null>(null);
+
+  const getGlassTint = (name: string, type: string) => {
+    const lowercaseName = name.toLowerCase();
+    if (lowercaseName.includes('bni')) return 'rgba(0, 94, 106, 0.45)';
+    if (lowercaseName.includes('mandiri')) return 'rgba(28, 53, 94, 0.45)';
+    if (lowercaseName.includes('bri')) return 'rgba(15, 76, 129, 0.45)';
+    if (lowercaseName.includes('gopay')) return 'rgba(0, 174, 214, 0.45)';
+    if (lowercaseName.includes('shopeepay')) return 'rgba(238, 77, 45, 0.45)';
+    if (lowercaseName.includes('tunai') || type === 'cash') return 'rgba(5, 150, 105, 0.45)';
+    if (type === 'bank') return 'rgba(59, 130, 246, 0.45)';
+    if (type === 'e-wallet') return 'rgba(139, 92, 246, 0.45)';
+    return 'rgba(30, 41, 59, 0.45)';
+  };
+
+  const handleCardClick = async (account: Account) => {
+    setSelectedPopupAccount(account);
+    setShowCardPopup(true);
+    setPopupLoading(true);
+    setPopupTransactions([]);
+    try {
+      const res = await fetch(`/api/transactions?accountId=${account.id}&limit=3`);
+      const data = await res.json();
+      if (res.ok) {
+        setPopupTransactions(data.data || []);
+      }
+    } catch (err) {
+      console.error('Error fetching popup transactions:', err);
+    } finally {
+      setPopupLoading(false);
+    }
+  };
+
   // Form rekening baru
   const [showAccountForm, setShowAccountForm] = useState(false);
   const [newAccountName, setNewAccountName] = useState('');
@@ -310,17 +347,9 @@ export default function DashboardPage() {
               <div className="deck-container">
                 <div className="deck-title-row">
                   <h2 className="deck-title">Rekening & E-Wallet Saya</h2>
-                  <div style={{ display: 'flex', gap: 16 }}>
-                    <span className="deck-link" onClick={() => {
-                      setAccountError('');
-                      setShowAccountForm(true);
-                    }}>
-                      ➕ Tambah
-                    </span>
-                    <a href="/transactions" className="deck-link">
-                      Lihat Semua →
-                    </a>
-                  </div>
+                  <a href="/accounts" className="deck-link">
+                    Lihat Semua →
+                  </a>
                 </div>
                 
                 <div className="cards-stack-wrapper">
@@ -349,6 +378,7 @@ export default function DashboardPage() {
                         }}
                         onClick={() => {
                           setActiveCardIndex(idx);
+                          handleCardClick(account);
                         }}
                       >
                         <div className="card-top">
@@ -362,9 +392,10 @@ export default function DashboardPage() {
                             className="card-plus-btn"
                             onClick={(e) => {
                               e.stopPropagation();
-                              setShowForm(true);
+                              setAccountError('');
+                              setShowAccountForm(true);
                             }}
-                            title="Tambah Transaksi"
+                            title="Tambah Rekening"
                           >
                             +
                           </button>
@@ -392,7 +423,10 @@ export default function DashboardPage() {
                     <button
                       key={account.id}
                       className={`account-pill ${activeCardIndex === idx ? 'active' : ''}`}
-                      onClick={() => setActiveCardIndex(idx)}
+                      onClick={() => {
+                        setActiveCardIndex(idx);
+                        handleCardClick(account);
+                      }}
                     >
                       <span>{account.type === 'bank' ? '🏦' : account.type === 'e-wallet' ? '📱' : '💵'}</span>
                       {account.name}
@@ -526,6 +560,159 @@ export default function DashboardPage() {
               <button className="btn btn-primary" onClick={handleAddAccount} disabled={accountLoading}>
                 {accountLoading ? <span className="loading-spinner" /> : '➕ Tambah'}
               </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Glassmorphic Transaction Popup */}
+      {showCardPopup && selectedPopupAccount && (
+        <div className="glass-modal-overlay" onClick={() => setShowCardPopup(false)}>
+          <div 
+            className="glass-modal-container" 
+            onClick={(e) => e.stopPropagation()}
+            style={{
+              background: `linear-gradient(135deg, ${getGlassTint(selectedPopupAccount.name, selectedPopupAccount.type)}, rgba(15, 23, 42, 0.6))`
+            }}
+          >
+            {/* Close Button */}
+            <button className="glass-modal-close" onClick={() => setShowCardPopup(false)}>✕</button>
+            
+            {/* Header / Account Card styling */}
+            <div style={{ marginTop: '8px' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+                <div>
+                  {getCardBrand(selectedPopupAccount.name, selectedPopupAccount.type, selectedPopupAccount.accountNumber).logo}
+                  <div style={{ fontSize: '11px', opacity: 0.7, marginTop: 4, letterSpacing: '0.05em', textTransform: 'uppercase' }}>
+                    {getCardBrand(selectedPopupAccount.name, selectedPopupAccount.type, selectedPopupAccount.accountNumber).subtitle}
+                  </div>
+                </div>
+                <span style={{ 
+                  fontSize: '20px', 
+                  fontWeight: '800', 
+                  color: '#ffffff'
+                }}>
+                  {formatRupiah(selectedPopupAccount.balance)}
+                </span>
+              </div>
+              <div style={{ marginTop: '24px', fontFamily: 'monospace', letterSpacing: '0.15em', fontSize: '14px', opacity: 0.8 }}>
+                {getCardBrand(selectedPopupAccount.name, selectedPopupAccount.type, selectedPopupAccount.accountNumber).cardNumber}
+              </div>
+              <div style={{ fontSize: '10px', opacity: 0.6, marginTop: '4px' }}>
+                VALID THRU {getCardBrand(selectedPopupAccount.name, selectedPopupAccount.type, selectedPopupAccount.accountNumber).expiry}
+              </div>
+            </div>
+
+            {/* Transactions Section */}
+            <div>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
+                <h3 className="glass-widget-title" style={{ fontSize: '18px', fontWeight: '700' }}>Transactions</h3>
+                <a 
+                  href={`/transactions?accountId=${selectedPopupAccount.id}`} 
+                  style={{ fontSize: '13px', fontWeight: '600', opacity: 0.8, display: 'flex', alignItems: 'center', gap: '4px' }}
+                >
+                  View All &gt;
+                </a>
+              </div>
+
+              {popupLoading ? (
+                <div style={{ display: 'flex', justifyContent: 'center', padding: '24px 0' }}>
+                  <div className="loading-dots">
+                    <div className="loading-dot" style={{ background: '#ffffff' }} />
+                    <div className="loading-dot" style={{ background: '#ffffff' }} />
+                    <div className="loading-dot" style={{ background: '#ffffff' }} />
+                  </div>
+                </div>
+              ) : popupTransactions.length === 0 ? (
+                <div style={{ textAlign: 'center', padding: '24px 0', opacity: 0.6, fontSize: '14px' }}>
+                  Belum ada transaksi di rekening ini
+                </div>
+              ) : (
+                <div className="glass-tx-list">
+                  {popupTransactions.map((tx: any) => {
+                    const isExpense = tx.type === 'expense';
+                    const amountFormatted = `${isExpense ? '- ' : '+ '}${formatRupiah(parseFloat(tx.amount))}`;
+                    const dateFormatted = new Date(tx.date).toLocaleDateString('id-ID', { day: 'numeric', month: 'short' });
+                    
+                    return (
+                      <div key={tx.id} className="glass-tx-item">
+                        <div className="glass-tx-icon">
+                          {tx.categoryIcon || (isExpense ? '💸' : '💰')}
+                        </div>
+                        <div className="glass-tx-info">
+                          <div className="glass-tx-name">{tx.description || tx.categoryName || 'Transaksi'}</div>
+                          <div className="glass-tx-date">{dateFormatted} • {tx.categoryName || 'Umum'}</div>
+                        </div>
+                        <div className={`glass-tx-amount ${isExpense ? 'expense' : 'income'}`}>
+                          {amountFormatted}
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+
+            {/* Bottom Widgets */}
+            <div className="glass-widgets-row">
+              {/* Widget: Add Friends */}
+              <div className="glass-widget">
+                <h4 className="glass-widget-title">Add friends</h4>
+                <p className="glass-widget-desc">Invite friends to join and earn rewards together</p>
+                <div className="glass-avatars-row">
+                  <img src="https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=80&fit=crop&crop=faces&q=80" alt="Friend 1" className="glass-avatar" />
+                  <img src="https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=80&fit=crop&crop=faces&q=80" alt="Friend 2" className="glass-avatar" />
+                  <img src="https://images.unsplash.com/photo-1570295999919-56ceb5ecca61?w=80&fit=crop&crop=faces&q=80" alt="Friend 3" className="glass-avatar" />
+                  <div style={{
+                    width: '28px',
+                    height: '28px',
+                    borderRadius: '50%',
+                    background: 'rgba(255, 255, 255, 0.15)',
+                    border: '2px solid rgba(30, 41, 59, 0.8)',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    fontSize: '10px',
+                    fontWeight: 'bold',
+                    marginLeft: '-4px',
+                    color: '#ffffff'
+                  }}>
+                    +5
+                  </div>
+                </div>
+              </div>
+
+              {/* Widget: Spending */}
+              <div className="glass-widget" style={{ justifyContent: 'space-between' }}>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
+                  <h4 className="glass-widget-title">Spending</h4>
+                  <p className="glass-widget-desc">Aktivitas bulanan</p>
+                </div>
+                {/* SVG wave curve graph exactly matching the picture */}
+                <div style={{ height: '36px', width: '100%', marginTop: '6px' }}>
+                  <svg viewBox="0 0 100 30" width="100%" height="100%" preserveAspectRatio="none">
+                    <defs>
+                      <linearGradient id="waveGrad" x1="0%" y1="0%" x2="0%" y2="100%">
+                        <stop offset="0%" stopColor="#38bdf8" stopOpacity="0.4" />
+                        <stop offset="100%" stopColor="#38bdf8" stopOpacity="0.0" />
+                      </linearGradient>
+                    </defs>
+                    <path 
+                      d="M0,25 C15,15 25,28 40,15 C55,2 70,25 85,12 C92,7 96,15 100,5" 
+                      fill="none" 
+                      stroke="#38bdf8" 
+                      strokeWidth="2.5" 
+                      strokeLinecap="round"
+                    />
+                    <path 
+                      d="M0,25 C15,15 25,28 40,15 C55,2 70,25 85,12 C92,7 96,15 100,5 L100,30 L0,30 Z" 
+                      fill="url(#waveGrad)"
+                    />
+                    {/* Glowing pulse dot at the end */}
+                    <circle cx="100" cy="5" r="2.5" fill="#38bdf8" />
+                  </svg>
+                </div>
+              </div>
             </div>
           </div>
         </div>
