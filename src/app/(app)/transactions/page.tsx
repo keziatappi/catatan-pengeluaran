@@ -4,6 +4,7 @@ import { useState, useEffect, useCallback } from 'react';
 import TransactionList from '@/components/TransactionList';
 import TransactionForm from '@/components/TransactionForm';
 import DeleteConfirm from '@/components/DeleteConfirm';
+import ReceiptScanner from '@/components/ReceiptScanner';
 
 interface TransactionData {
   id: number;
@@ -38,6 +39,7 @@ export default function TransactionsPage() {
 
   // Modals
   const [showForm, setShowForm] = useState(false);
+  const [showScanner, setShowScanner] = useState(false);
   const [editData, setEditData] = useState<{
     id: number;
     categoryId: number;
@@ -148,21 +150,31 @@ export default function TransactionsPage() {
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'space-between',
+          flexWrap: 'wrap',
+          gap: 16,
         }}
       >
         <div>
           <h1 className="page-title">Transaksi</h1>
           <p className="page-subtitle">Kelola semua catatan keuangan Anda</p>
         </div>
-        <button
-          className="btn btn-primary"
-          onClick={() => {
-            setEditData(null);
-            setShowForm(true);
-          }}
-        >
-          ➕ Tambah Transaksi
-        </button>
+        <div style={{ display: 'flex', gap: 12 }}>
+          <button
+            className="btn btn-secondary"
+            onClick={() => setShowScanner(true)}
+          >
+            📸 Scan Struk
+          </button>
+          <button
+            className="btn btn-primary"
+            onClick={() => {
+              setEditData(null);
+              setShowForm(true);
+            }}
+          >
+            ➕ Tambah Transaksi
+          </button>
+        </div>
       </div>
 
       {/* Filters */}
@@ -303,6 +315,13 @@ export default function TransactionsPage() {
         onClose={() => setDeleteId(null)}
         onConfirm={handleDelete}
         loading={deleteLoading}
+      />
+
+      {/* Receipt Scanner Modal */}
+      <ReceiptScanner
+        isOpen={showScanner}
+        onClose={() => setShowScanner(false)}
+        onSaved={fetchTransactions}
       />
     </div>
   );

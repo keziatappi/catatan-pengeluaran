@@ -6,6 +6,7 @@ import SummaryCards from '@/components/SummaryCards';
 import Chart from '@/components/Chart';
 import TransactionList from '@/components/TransactionList';
 import TransactionForm from '@/components/TransactionForm';
+import ReceiptScanner from '@/components/ReceiptScanner';
 
 interface TransactionData {
   id: number;
@@ -31,6 +32,7 @@ export default function DashboardPage() {
   const [month, setMonth] = useState(new Date().getMonth() + 1);
   const [year, setYear] = useState(new Date().getFullYear());
   const [showForm, setShowForm] = useState(false);
+  const [showScanner, setShowScanner] = useState(false);
   const [loading, setLoading] = useState(true);
 
   const fetchData = useCallback(async () => {
@@ -77,14 +79,19 @@ export default function DashboardPage() {
 
   return (
     <div className="page-container">
-      <div className="page-header" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+      <div className="page-header" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 16 }}>
         <div>
           <h1 className="page-title">Dashboard</h1>
           <p className="page-subtitle">Ringkasan keuangan Anda</p>
         </div>
-        <button className="btn btn-primary" onClick={() => setShowForm(true)}>
-          ➕ Tambah Transaksi
-        </button>
+        <div style={{ display: 'flex', gap: 12 }}>
+          <button className="btn btn-secondary" onClick={() => setShowScanner(true)}>
+            📸 Scan Struk
+          </button>
+          <button className="btn btn-primary" onClick={() => setShowForm(true)}>
+            ➕ Tambah Transaksi
+          </button>
+        </div>
       </div>
 
       {/* Month Selector */}
@@ -138,6 +145,13 @@ export default function DashboardPage() {
       <TransactionForm
         isOpen={showForm}
         onClose={() => setShowForm(false)}
+        onSaved={fetchData}
+      />
+
+      {/* Receipt Scanner Modal */}
+      <ReceiptScanner
+        isOpen={showScanner}
+        onClose={() => setShowScanner(false)}
         onSaved={fetchData}
       />
     </div>
