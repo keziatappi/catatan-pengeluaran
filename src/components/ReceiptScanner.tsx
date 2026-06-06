@@ -36,6 +36,8 @@ export default function ReceiptScanner({
   const [step, setStep] = useState<'upload' | 'scanning' | 'review'>('upload');
   const [image, setImage] = useState<string | null>(null);
   const [categories, setCategories] = useState<Category[]>([]);
+  const [accounts, setAccounts] = useState<any[]>([]);
+  const [accountId, setAccountId] = useState<number | null>(null);
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
 
@@ -49,13 +51,26 @@ export default function ReceiptScanner({
   const fileInputRef = useRef<HTMLInputElement>(null);
   const cameraInputRef = useRef<HTMLInputElement>(null);
 
-  // Fetch categories on open
+  // Fetch categories & accounts on open
   useEffect(() => {
     if (isOpen) {
       fetch('/api/categories')
         .then((res) => res.json())
         .then((data) => {
           setCategories(data.filter((c: Category) => c.type === 'expense'));
+        })
+        .catch(() => {});
+
+      fetch('/api/accounts')
+        .then((res) => res.json())
+        .then((data) => {
+          setAccounts(data);
+          const tunaiAcc = data.find((a: any) => a.name.toLowerCase() === 'tunai');
+          if (tunaiAcc) {
+            setAccountId(tunaiAcc.id);
+          } else if (data.length > 0) {
+            setAccountId(data[0].id);
+          }
         })
         .catch(() => {});
     }
@@ -68,6 +83,8 @@ export default function ReceiptScanner({
     setMerchant('');
     setDate('');
     setCategoryId(null);
+    const tunaiAcc = accounts.find((a) => a.name.toLowerCase() === 'tunai');
+    setAccountId(tunaiAcc ? tunaiAcc.id : (accounts[0]?.id || null));
     setItems([]);
     setOriginalTotal(0);
   };
@@ -185,6 +202,7 @@ export default function ReceiptScanner({
         type: 'expense',
         amount,
         categoryId: selectedCategoryId,
+        accountId,
         description,
         date,
       }),
@@ -385,6 +403,23 @@ export default function ReceiptScanner({
                       onChange={(e) => setDate(e.target.value)}
                     />
                   </div>
+                </div>
+
+                {/* Account / Wallet Selection */}
+                <div className="form-group">
+                  <label className="form-label">Bayar Menggunakan</label>
+                  <select
+                    className="form-select"
+                    value={accountId || ''}
+                    onChange={(e) => setAccountId(e.target.value ? parseInt(e.target.value) : null)}
+                  >
+                    <option value="" disabled>Pilih Rekening / E-Wallet</option>
+                    {accounts.map((acc) => (
+                      <option key={acc.id} value={acc.id}>
+                        {acc.type === 'bank' ? '🏦' : acc.type === 'e-wallet' ? '📱' : '💵'} {acc.name}
+                      </option>
+                    ))}
+                  </select>
                 </div>
 
                 {/* Categories */}

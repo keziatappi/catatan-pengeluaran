@@ -18,10 +18,19 @@ export const categories = pgTable('categories', {
   createdAt: timestamp('created_at').defaultNow().notNull(),
 });
 
+export const accounts = pgTable('accounts', {
+  id: serial('id').primaryKey(),
+  userId: integer('user_id').references(() => users.id).notNull(),
+  name: varchar('name', { length: 100 }).notNull(),
+  type: varchar('type', { length: 50 }).notNull(), // 'bank', 'e-wallet', 'cash'
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+});
+
 export const transactions = pgTable('transactions', {
   id: serial('id').primaryKey(),
   userId: integer('user_id').references(() => users.id).notNull(),
   categoryId: integer('category_id').references(() => categories.id).notNull(),
+  accountId: integer('account_id').references(() => accounts.id),
   type: transactionTypeEnum('type').notNull(),
   amount: decimal('amount', { precision: 15, scale: 2 }).notNull(),
   description: text('description'),
@@ -34,5 +43,8 @@ export const transactions = pgTable('transactions', {
 export type User = typeof users.$inferSelect;
 export type NewUser = typeof users.$inferInsert;
 export type Category = typeof categories.$inferSelect;
+export type Account = typeof accounts.$inferSelect;
+export type NewAccount = typeof accounts.$inferInsert;
 export type Transaction = typeof transactions.$inferSelect;
 export type NewTransaction = typeof transactions.$inferInsert;
+

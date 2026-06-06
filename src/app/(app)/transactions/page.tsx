@@ -8,13 +8,15 @@ import ReceiptScanner from '@/components/ReceiptScanner';
 
 interface TransactionData {
   id: number;
+  categoryId: number;
   categoryName: string | null;
   categoryIcon: string | null;
+  accountId?: number | null;
+  accountName?: string | null;
   type: string;
   amount: string;
   description: string | null;
   date: string;
-  categoryId: number;
 }
 
 interface Category {
@@ -24,9 +26,16 @@ interface Category {
   icon: string;
 }
 
+interface Account {
+  id: number;
+  name: string;
+  type: string;
+}
+
 export default function TransactionsPage() {
   const [transactions, setTransactions] = useState<TransactionData[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
+  const [accounts, setAccounts] = useState<Account[]>([]);
   const [loading, setLoading] = useState(true);
   const [page, setPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
@@ -34,6 +43,7 @@ export default function TransactionsPage() {
   // Filters
   const [filterType, setFilterType] = useState('');
   const [filterCategory, setFilterCategory] = useState('');
+  const [filterAccount, setFilterAccount] = useState('');
   const [filterStartDate, setFilterStartDate] = useState('');
   const [filterEndDate, setFilterEndDate] = useState('');
 
@@ -43,6 +53,7 @@ export default function TransactionsPage() {
   const [editData, setEditData] = useState<{
     id: number;
     categoryId: number;
+    accountId?: number | null;
     type: string;
     amount: string;
     description: string;
@@ -61,6 +72,16 @@ export default function TransactionsPage() {
     }
   }, []);
 
+  const fetchAccounts = useCallback(async () => {
+    try {
+      const res = await fetch('/api/accounts');
+      const data = await res.json();
+      setAccounts(data);
+    } catch {
+      /* ignore */
+    }
+  }, []);
+
   const fetchTransactions = useCallback(async () => {
     setLoading(true);
     try {
@@ -69,6 +90,7 @@ export default function TransactionsPage() {
       params.set('limit', '15');
       if (filterType) params.set('type', filterType);
       if (filterCategory) params.set('categoryId', filterCategory);
+      if (filterAccount) params.set('accountId', filterAccount);
       if (filterStartDate) params.set('startDate', filterStartDate);
       if (filterEndDate) params.set('endDate', filterEndDate);
 
@@ -82,11 +104,12 @@ export default function TransactionsPage() {
     } finally {
       setLoading(false);
     }
-  }, [page, filterType, filterCategory, filterStartDate, filterEndDate]);
+  }, [page, filterType, filterCategory, filterAccount, filterStartDate, filterEndDate]);
 
   useEffect(() => {
     fetchCategories();
-  }, [fetchCategories]);
+    fetchAccounts();
+  }, [fetchCategories, fetchAccounts]);
 
   useEffect(() => {
     fetchTransactions();
@@ -96,6 +119,7 @@ export default function TransactionsPage() {
     setEditData({
       id: tx.id,
       categoryId: tx.categoryId,
+      accountId: tx.accountId,
       type: tx.type,
       amount: tx.amount,
       description: tx.description || '',
@@ -135,12 +159,13 @@ export default function TransactionsPage() {
   const clearFilters = () => {
     setFilterType('');
     setFilterCategory('');
+    setFilterAccount('');
     setFilterStartDate('');
     setFilterEndDate('');
     setPage(1);
   };
 
-  const hasFilters = filterType || filterCategory || filterStartDate || filterEndDate;
+  const hasFilters = filterType || filterCategory || filterAccount || filterStartDate || filterEndDate;
 
   return (
     <div className="page-container">
@@ -208,6 +233,22 @@ export default function TransactionsPage() {
                 {cat.icon} {cat.name}
               </option>
             ))}
+        </select>
+
+        <select
+          className="form-select"
+          value={filterAccount}
+          onChange={(e) => {
+            setFilterAccount(e.target.value);
+            setPage(1);
+          }}
+        >
+          <option value="">Semua Rekening</option>
+          {accounts.map((acc) => (
+            <option key={acc.id} value={acc.id}>
+              {acc.type === 'bank' ? '🏦' : acc.type === 'e-wallet' ? '📱' : '💵'} {acc.name}
+            </option>
+          ))}
         </select>
 
         <input

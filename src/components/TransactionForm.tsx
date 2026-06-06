@@ -9,6 +9,12 @@ interface Category {
   icon: string;
 }
 
+interface Account {
+  id: number;
+  name: string;
+  type: string;
+}
+
 interface TransactionFormProps {
   isOpen: boolean;
   onClose: () => void;
@@ -16,6 +22,7 @@ interface TransactionFormProps {
   editData?: {
     id: number;
     categoryId: number;
+    accountId?: number | null;
     type: string;
     amount: string;
     description: string;
@@ -32,9 +39,11 @@ export default function TransactionForm({
   const [type, setType] = useState<'expense' | 'income'>('expense');
   const [amount, setAmount] = useState('');
   const [categoryId, setCategoryId] = useState<number | null>(null);
+  const [accountId, setAccountId] = useState<number | null>(null);
   const [description, setDescription] = useState('');
   const [date, setDate] = useState(new Date().toISOString().split('T')[0]);
   const [categories, setCategories] = useState<Category[]>([]);
+  const [accounts, setAccounts] = useState<Account[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
 
@@ -44,14 +53,30 @@ export default function TransactionForm({
         .then((res) => res.json())
         .then(setCategories)
         .catch(() => {});
+
+      fetch('/api/accounts')
+        .then((res) => res.json())
+        .then((data) => {
+          setAccounts(data);
+          if (!editData) {
+            const tunaiAcc = data.find((a: any) => a.name.toLowerCase() === 'tunai');
+            if (tunaiAcc) {
+              setAccountId(tunaiAcc.id);
+            } else if (data.length > 0) {
+              setAccountId(data[0].id);
+            }
+          }
+        })
+        .catch(() => {});
     }
-  }, [isOpen]);
+  }, [isOpen, editData]);
 
   useEffect(() => {
     if (editData) {
       setType(editData.type as 'expense' | 'income');
       setAmount(editData.amount);
       setCategoryId(editData.categoryId);
+      setAccountId(editData.accountId || null);
       setDescription(editData.description || '');
       setDate(editData.date);
     } else {
@@ -63,14 +88,16 @@ export default function TransactionForm({
     setType('expense');
     setAmount('');
     setCategoryId(null);
+    const tunaiAcc = accounts.find((a) => a.name.toLowerCase() === 'tunai');
+    setAccountId(tunaiAcc ? tunaiAcc.id : (accounts[0]?.id || null));
     setDescription('');
     setDate(new Date().toISOString().split('T')[0]);
     setError('');
   };
 
   const handleSubmit = async () => {
-    if (!amount || !categoryId || !date) {
-      setError('Jumlah, kategori, dan tanggal harus diisi');
+    if (!amount || !categoryId || !date || !accountId) {
+      setError('Jumlah, kategori, rekening, dan tanggal harus diisi');
       return;
     }
 
@@ -96,6 +123,7 @@ export default function TransactionForm({
           type,
           amount: numAmount,
           categoryId,
+          accountId,
           description,
           date,
         }),
@@ -123,6 +151,7 @@ export default function TransactionForm({
     if (isNaN(num)) return '';
     return new Intl.NumberFormat('id-ID').format(num);
   };
+
 
   if (!isOpen) return null;
 
@@ -207,6 +236,23 @@ export default function TransactionForm({
                 </button>
               ))}
             </div>
+          </div>
+
+          {/* Account */}
+          <div className="form-group">
+            <label className="form-label">Rekening / E-Wallet</label>
+            <select
+              className="form-select"
+              value={accountId || ''}
+              onChange={(e) => setAccountId(e.target.value ? parseInt(e.target.value) : null)}
+            >
+              <option value="" disabled>Pilih Rekening / E-Wallet</option>
+              {accounts.map((acc) => (
+                <option key={acc.id} value={acc.id}>
+                  {acc.type === 'bank' ? '🏦' : acc.type === 'e-wallet' ? '📱' : '💵'} {acc.name}
+                </option>
+              ))}
+            </select>
           </div>
 
           {/* Date */}

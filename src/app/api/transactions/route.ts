@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/db/db';
-import { transactions, categories } from '@/db/schema';
+import { transactions, categories, accounts } from '@/db/schema';
 import { eq, and, desc, gte, lte, sql } from 'drizzle-orm';
 
 function getUserId(request: NextRequest): number | null {
@@ -20,6 +20,7 @@ export async function GET(request: NextRequest) {
     const startDate = searchParams.get('startDate');
     const endDate = searchParams.get('endDate');
     const categoryId = searchParams.get('categoryId');
+    const accountId = searchParams.get('accountId');
     const page = parseInt(searchParams.get('page') || '1');
     const limit = parseInt(searchParams.get('limit') || '20');
     const offset = (page - 1) * limit;
@@ -38,6 +39,9 @@ export async function GET(request: NextRequest) {
     if (categoryId) {
       conditions.push(eq(transactions.categoryId, parseInt(categoryId)));
     }
+    if (accountId) {
+      conditions.push(eq(transactions.accountId, parseInt(accountId)));
+    }
 
     const whereClause = and(...conditions);
 
@@ -49,6 +53,8 @@ export async function GET(request: NextRequest) {
           categoryId: transactions.categoryId,
           categoryName: categories.name,
           categoryIcon: categories.icon,
+          accountId: transactions.accountId,
+          accountName: accounts.name,
           type: transactions.type,
           amount: transactions.amount,
           description: transactions.description,
@@ -57,6 +63,7 @@ export async function GET(request: NextRequest) {
         })
         .from(transactions)
         .leftJoin(categories, eq(transactions.categoryId, categories.id))
+        .leftJoin(accounts, eq(transactions.accountId, accounts.id))
         .where(whereClause)
         .orderBy(desc(transactions.date), desc(transactions.createdAt))
         .limit(limit)
@@ -92,7 +99,7 @@ export async function POST(request: NextRequest) {
 
   try {
     const body = await request.json();
-    const { categoryId, type, amount, description, date } = body;
+    const { categoryId, accountId, type, amount, description, date } = body;
 
     if (!categoryId || !type || !amount || !date) {
       return NextResponse.json(
@@ -108,9 +115,23 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    // Tentukan accountId final
+    let finalAccountId = accountId ? parseInt(accountId) : null;
+    if (!finalAccountId) {
+      // Ambil rekening 'Tunai' atau rekening pertama user
+      const userAccs = await db
+        .select()
+        .from(accounts)
+        .where(eq(accounts.userId, userId));
+      
+      const tunaiAcc = userAccs.find(a => a.name.toLowerCase() === 'tunai');
+      finalAccountId = tunaiAcc ? tunaiAcc.id : (userAccs[0]?.id || null);
+    }
+
     const result = await db.insert(transactions).values({
       userId,
       categoryId: parseInt(categoryId),
+      accountId: finalAccountId,
       type,
       amount: String(amount),
       description: description || null,
@@ -123,3 +144,4 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: 'Gagal membuat transaksi' }, { status: 500 });
   }
 }
+

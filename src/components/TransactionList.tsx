@@ -7,6 +7,8 @@ interface TransactionData {
   categoryId: number;
   categoryName: string | null;
   categoryIcon: string | null;
+  accountId?: number | null;
+  accountName?: string | null;
   type: string;
   amount: string;
   description: string | null;
@@ -52,6 +54,11 @@ export default function TransactionList({
           <div className="transaction-info">
             <div className="transaction-category">
               {tx.categoryName || 'Tanpa Kategori'}
+              {tx.accountName && (
+                <span style={{ opacity: 0.75, fontWeight: 400, fontSize: 13, color: 'var(--text-secondary)' }}>
+                  {' • '}{tx.accountName}
+                </span>
+              )}
             </div>
             <div className="transaction-desc">
               {tx.description || '—'}

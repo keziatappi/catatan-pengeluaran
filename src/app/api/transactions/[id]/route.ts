@@ -20,7 +20,7 @@ export async function PUT(
   try {
     const { id } = await params;
     const body = await request.json();
-    const { categoryId, type, amount, description, date } = body;
+    const { categoryId, accountId, type, amount, description, date } = body;
 
     // Verify ownership
     const existing = await db
@@ -37,6 +37,7 @@ export async function PUT(
       .update(transactions)
       .set({
         categoryId: categoryId ? parseInt(categoryId) : undefined,
+        accountId: accountId ? parseInt(accountId) : undefined,
         type: type || undefined,
         amount: amount ? String(amount) : undefined,
         description: description !== undefined ? description : undefined,
