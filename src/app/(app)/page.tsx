@@ -94,6 +94,62 @@ export default function DashboardPage() {
   const [showScanner, setShowScanner] = useState(false);
   const [loading, setLoading] = useState(true);
 
+  // Form rekening baru
+  const [showAccountForm, setShowAccountForm] = useState(false);
+  const [newAccountName, setNewAccountName] = useState('');
+  const [newAccountType, setNewAccountType] = useState<'bank' | 'e-wallet' | 'cash'>('bank');
+  const [accountError, setAccountError] = useState('');
+  const [accountLoading, setAccountLoading] = useState(false);
+
+  const handleAddAccount = async () => {
+    if (!newAccountName.trim() || !newAccountType) {
+      setAccountError('Nama dan tipe harus diisi');
+      return;
+    }
+
+    setAccountLoading(true);
+    setAccountError('');
+    try {
+      const res = await fetch('/api/accounts', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          name: newAccountName.trim(),
+          type: newAccountType,
+        }),
+      });
+
+      if (!res.ok) {
+        const data = await res.json();
+        throw new Error(data.error || 'Gagal menambahkan rekening');
+      }
+
+      // Refresh list rekening
+      const refreshedRes = await fetch('/api/accounts');
+      const refreshedData = await refreshedRes.json();
+      setAccounts(refreshedData);
+      
+      // Pilih rekening baru
+      const newAcc = refreshedData.find(
+        (a: any) => a.name.toLowerCase() === newAccountName.trim().toLowerCase()
+      );
+      if (newAcc) {
+        const idx = refreshedData.indexOf(newAcc);
+        if (idx !== -1) setActiveCardIndex(idx);
+      } else {
+        setActiveCardIndex(refreshedData.length - 1);
+      }
+
+      setNewAccountName('');
+      setNewAccountType('bank');
+      setShowAccountForm(false);
+    } catch (err: any) {
+      setAccountError(err.message || 'Terjadi kesalahan');
+    } finally {
+      setAccountLoading(false);
+    }
+  };
+
   const fetchData = useCallback(async () => {
     setLoading(true);
     try {
@@ -193,9 +249,17 @@ export default function DashboardPage() {
               <div className="deck-container">
                 <div className="deck-title-row">
                   <h2 className="deck-title">Rekening & E-Wallet Saya</h2>
-                  <a href="/transactions" className="deck-link">
-                    Lihat Semua →
-                  </a>
+                  <div style={{ display: 'flex', gap: 16 }}>
+                    <span className="deck-link" onClick={() => {
+                      setAccountError('');
+                      setShowAccountForm(true);
+                    }}>
+                      ➕ Tambah
+                    </span>
+                    <a href="/transactions" className="deck-link">
+                      Lihat Semua →
+                    </a>
+                  </div>
                 </div>
                 
                 <div className="cards-stack-wrapper">
@@ -334,6 +398,61 @@ export default function DashboardPage() {
         onClose={() => setShowScanner(false)}
         onSaved={fetchData}
       />
+
+      {/* Account Form Modal */}
+      {showAccountForm && (
+        <div className="modal-overlay" onClick={() => setShowAccountForm(false)}>
+          <div className="modal" style={{ maxWidth: '400px' }} onClick={(e) => e.stopPropagation()}>
+            <div className="modal-header">
+              <h2 className="modal-title">Tambah Rekening</h2>
+              <button className="modal-close" onClick={() => setShowAccountForm(false)}>
+                ✕
+              </button>
+            </div>
+            
+            <div className="modal-body">
+              {accountError && (
+                <div className="login-error" style={{ marginBottom: 16 }}>
+                  ⚠️ {accountError}
+                </div>
+              )}
+              
+              <div className="form-group">
+                <label className="form-label">Nama Rekening / E-Wallet</label>
+                <input
+                  type="text"
+                  className="form-input"
+                  placeholder="Contoh: Bank BNI, GoPay, Cash Pribadi"
+                  value={newAccountName}
+                  onChange={(e) => setNewAccountName(e.target.value)}
+                />
+              </div>
+              
+              <div className="form-group">
+                <label className="form-label">Tipe</label>
+                <select
+                  className="form-select"
+                  value={newAccountType}
+                  onChange={(e) => setNewAccountType(e.target.value as any)}
+                >
+                  <option value="bank">🏦 Bank / Rekening</option>
+                  <option value="e-wallet">📱 E-Wallet</option>
+                  <option value="cash">💵 Tunai / Cash</option>
+                </select>
+              </div>
+            </div>
+            
+            <div className="modal-footer">
+              <button className="btn btn-secondary" onClick={() => setShowAccountForm(false)} disabled={accountLoading}>
+                Batal
+              </button>
+              <button className="btn btn-primary" onClick={handleAddAccount} disabled={accountLoading}>
+                {accountLoading ? <span className="loading-spinner" /> : '➕ Tambah'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
