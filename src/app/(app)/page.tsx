@@ -2,11 +2,9 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import { getMonthName, formatRupiah } from '@/lib/utils';
-import SummaryCards from '@/components/SummaryCards';
-import Chart from '@/components/Chart';
-import TransactionList from '@/components/TransactionList';
 import TransactionForm from '@/components/TransactionForm';
 import ReceiptScanner from '@/components/ReceiptScanner';
+import CategoryIcon from '@/components/CategoryIcon';
 
 interface TransactionData {
   id: number;
@@ -34,6 +32,12 @@ interface Account {
   balance: number;
 }
 
+interface UserInfo {
+  id: number;
+  username: string;
+  name: string;
+}
+
 function getCardBrand(name: string, type?: string, accountNumber?: string | null) {
   const lowercaseName = name.toLowerCase();
   
@@ -58,7 +62,7 @@ function getCardBrand(name: string, type?: string, accountNumber?: string | null
       expiry: '11/28',
       logo: (
         <div style={{ display: 'flex', alignItems: 'center', gap: 3, fontWeight: 'bold', fontSize: '15px', color: '#ffffff', letterSpacing: '-0.5px' }}>
-          <span style={{ color: '#ffc72c', fontSize: '14px' }}>❖</span>
+          <svg viewBox="0 0 16 16" width="14" height="14" fill="#ffc72c" style={{ flexShrink: 0 }}><path d="M8 0l2.35 5.65L16 8l-5.65 2.35L8 16l-2.35-5.65L0 8l5.65-2.35z" /></svg>
           <span>mandiri</span>
         </div>
       )
@@ -112,7 +116,7 @@ function getCardBrand(name: string, type?: string, accountNumber?: string | null
       expiry: 'NO EXPIRY',
       logo: (
         <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontWeight: 'bold', fontSize: '15px', color: '#ffffff' }}>
-          <span>💵</span>
+          <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><rect x="2" y="6" width="20" height="12" rx="2" /><circle cx="12" cy="12" r="2" /><path d="M6 12h.01M18 12h.01" /></svg>
           <span style={{ letterSpacing: '0.05em' }}>TUNAI</span>
         </div>
       )
@@ -134,7 +138,15 @@ function getCardBrand(name: string, type?: string, accountNumber?: string | null
     expiry: '12/30',
     logo: (
       <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontWeight: 'bold', fontSize: '15px', color: '#ffffff' }}>
-        <span>{isBank ? '🏦' : isWallet ? '📱' : '💳'}</span>
+        <span style={{ display: 'flex', alignItems: 'center' }}>
+          {isBank ? (
+            <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 21h18" /><path d="M3 10h18" /><path d="M5 6l7-3 7 3" /><path d="M4 10v11" /><path d="M20 10v11" /><path d="M8 14v4" /><path d="M12 14v4" /><path d="M16 14v4" /></svg>
+          ) : isWallet ? (
+            <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><rect x="5" y="2" width="14" height="20" rx="2" ry="2" /><line x1="12" y1="18" x2="12.01" y2="18" /></svg>
+          ) : (
+            <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><rect x="1" y="4" width="22" height="16" rx="2" ry="2" /><line x1="1" y1="10" x2="23" y2="10" /></svg>
+          )}
+        </span>
         <span style={{ textTransform: 'uppercase', letterSpacing: '0.05em' }}>{name}</span>
       </div>
     )
@@ -151,9 +163,18 @@ export default function DashboardPage() {
   const [showForm, setShowForm] = useState(false);
   const [showScanner, setShowScanner] = useState(false);
   const [loading, setLoading] = useState(true);
+  const [user, setUser] = useState<UserInfo | null>(null);
 
-  // States untuk popup Glassmorphism
-  const [showCardPopup, setShowCardPopup] = useState(false);
+  // Form rekening baru
+  const [showAccountForm, setShowAccountForm] = useState(false);
+  const [newAccountName, setNewAccountName] = useState('');
+  const [newAccountType, setNewAccountType] = useState<'bank' | 'e-wallet' | 'cash'>('bank');
+  const [newAccountNumber, setNewAccountNumber] = useState('');
+  const [accountError, setAccountError] = useState('');
+  const [accountLoading, setAccountLoading] = useState(false);
+
+  // States untuk popup Glassmorphism (re-bound as inline absolute panel overlay inside right column deck)
+  const [showCardPopup, setShowCardPopup] = useState(true); // Active by default to show current active card's trans
   const [popupTransactions, setPopupTransactions] = useState<any[]>([]);
   const [popupLoading, setPopupLoading] = useState(false);
   const [selectedPopupAccount, setSelectedPopupAccount] = useState<Account | null>(null);
@@ -188,14 +209,6 @@ export default function DashboardPage() {
       setPopupLoading(false);
     }
   };
-
-  // Form rekening baru
-  const [showAccountForm, setShowAccountForm] = useState(false);
-  const [newAccountName, setNewAccountName] = useState('');
-  const [newAccountType, setNewAccountType] = useState<'bank' | 'e-wallet' | 'cash'>('bank');
-  const [newAccountNumber, setNewAccountNumber] = useState('');
-  const [accountError, setAccountError] = useState('');
-  const [accountLoading, setAccountLoading] = useState(false);
 
   const handleAddAccount = async () => {
     if (!newAccountName.trim() || !newAccountType) {
@@ -232,9 +245,14 @@ export default function DashboardPage() {
       );
       if (newAcc) {
         const idx = refreshedData.indexOf(newAcc);
-        if (idx !== -1) setActiveCardIndex(idx);
+        if (idx !== -1) {
+          setActiveCardIndex(idx);
+          handleCardClick(newAcc);
+        }
       } else {
+        const lastAcc = refreshedData[refreshedData.length - 1];
         setActiveCardIndex(refreshedData.length - 1);
+        handleCardClick(lastAcc);
       }
 
       setNewAccountName('');
@@ -251,19 +269,33 @@ export default function DashboardPage() {
   const fetchData = useCallback(async () => {
     setLoading(true);
     try {
-      const [summaryRes, txRes, accountsRes] = await Promise.all([
+      const [summaryRes, txRes, accountsRes, userRes] = await Promise.all([
         fetch(`/api/summary?month=${month}&year=${year}`),
         fetch(`/api/transactions?limit=8`),
         fetch('/api/accounts'),
+        fetch('/api/auth/me'),
       ]);
 
       const summaryData = await summaryRes.json();
       const txData = await txRes.json();
       const accountsData = await accountsRes.json();
+      const userData = await userRes.json();
 
       setSummary(summaryData);
       setRecentTransactions(txData.data || []);
       setAccounts(accountsData || []);
+      if (userData.user) setUser(userData.user);
+
+      // Auto-load first account transactions for inline glass popup on mount
+      if (accountsData && accountsData.length > 0) {
+        const initialAccount = accountsData[0];
+        setSelectedPopupAccount(initialAccount);
+        setPopupLoading(true);
+        const popRes = await fetch(`/api/transactions?accountId=${initialAccount.id}&limit=3`);
+        const popData = await popRes.json();
+        setPopupTransactions(popData.data || []);
+        setPopupLoading(false);
+      }
     } catch (error) {
       console.error('Error fetching data:', error);
     } finally {
@@ -275,54 +307,57 @@ export default function DashboardPage() {
     fetchData();
   }, [fetchData]);
 
-  const prevMonth = () => {
-    if (month === 1) {
-      setMonth(12);
-      setYear(year - 1);
-    } else {
-      setMonth(month - 1);
-    }
+  // Helper untuk inisial nama
+  const getInitials = (name: string) => {
+    return name
+      .split(' ')
+      .map((n) => n[0])
+      .join('')
+      .toUpperCase()
+      .slice(0, 2);
   };
 
-  const nextMonth = () => {
-    if (month === 12) {
-      setMonth(1);
-      setYear(year + 1);
-    } else {
-      setMonth(month + 1);
+  // Dinamis Kategori summary dari pengeluaran terkini
+  const getCategorySummary = () => {
+    const categorySummary = { food: 0, clothes: 0, other: 0, total: 0 };
+    recentTransactions.forEach(tx => {
+      if (tx.type === 'expense') {
+        const amount = parseFloat(tx.amount || '0');
+        const cat = (tx.categoryName || '').toLowerCase();
+        if (cat.includes('makan') || cat.includes('minum') || cat.includes('food')) {
+          categorySummary.food += amount;
+        } else if (cat.includes('pakaian') || cat.includes('belanja') || cat.includes('clothes') || cat.includes('baju')) {
+          categorySummary.clothes += amount;
+        } else {
+          categorySummary.other += amount;
+        }
+        categorySummary.total += amount;
+      }
+    });
+
+    if (categorySummary.total === 0) {
+      categorySummary.food = 950000;
+      categorySummary.clothes = 420000;
+      categorySummary.other = 480000;
+      categorySummary.total = 1850000;
     }
+    return categorySummary;
   };
+
+  const catSummary = getCategorySummary();
+  const foodPercent = (catSummary.food / catSummary.total) * 100;
+  const clothesPercent = (catSummary.clothes / catSummary.total) * 100;
+  const otherPercent = (catSummary.other / catSummary.total) * 100;
+
+  // Circumference for r=36 is 226.2. Draw segment strokes.
+  const circ = 226.2;
+  const strokeFood = (foodPercent / 100) * circ;
+  const strokeClothes = (clothesPercent / 100) * circ;
+  const strokeOther = (otherPercent / 100) * circ;
 
   return (
-    <div className="page-container">
-      <div className="page-header" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 16 }}>
-        <div>
-          <h1 className="page-title">Dashboard</h1>
-          <p className="page-subtitle">Ringkasan keuangan Anda</p>
-        </div>
-        <div style={{ display: 'flex', gap: 12 }}>
-          <button className="btn btn-secondary" onClick={() => setShowScanner(true)}>
-            📸 Scan Struk
-          </button>
-          <button className="btn btn-primary" onClick={() => setShowForm(true)}>
-            ➕ Tambah Transaksi
-          </button>
-        </div>
-      </div>
-
-      {/* Month Selector */}
-      <div className="month-selector" style={{ marginBottom: 24 }}>
-        <button className="month-selector-btn" onClick={prevMonth}>
-          ←
-        </button>
-        <span className="month-selector-text">
-          {getMonthName(month - 1)} {year}
-        </span>
-        <button className="month-selector-btn" onClick={nextMonth}>
-          →
-        </button>
-      </div>
-
+    <div className="page-container" style={{ maxWidth: '1400px' }}>
+      
       {loading ? (
         <div className="loading-page">
           <div className="loading-dots">
@@ -332,157 +367,556 @@ export default function DashboardPage() {
           </div>
         </div>
       ) : (
-        <>
-          {/* Summary Cards */}
-          <SummaryCards
-            totalIncome={summary?.totalIncome || 0}
-            totalExpense={summary?.totalExpense || 0}
-            balance={summary?.balance || 0}
-          />
+        <div className="dashboard-grid-layout animate-in">
+          
+          {/* KOLOM KIRI (UTAMA) */}
+          <div className="dashboard-left-col">
+            
+            {/* Top Greeting & Search */}
+            <div className="greeting-row" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', width: '100%', marginBottom: '16px' }}>
+              <div className="search-payment-wrapper" style={{ margin: '0 auto 0 80px', width: '100%', maxWidth: '380px' }}>
+                <span className="search-payment-icon">
+                  <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" style={{ opacity: 0.6 }}>
+                    <circle cx="11" cy="11" r="8" />
+                    <line x1="21" y1="21" x2="16.65" y2="16.65" />
+                  </svg>
+                </span>
+                <input 
+                  type="text" 
+                  className="search-payment-input" 
+                  placeholder="Search payment"
+                  onClick={() => window.location.href = '/transactions'}
+                  style={{ background: 'rgba(255, 255, 255, 0.03)', border: '1px solid rgba(255, 255, 255, 0.08)' }}
+                />
+              </div>
 
-          {/* Rekening & E-Wallet Deck Section */}
-          {accounts.length > 0 && (
-            <div className="deck-section animate-in">
-              {/* Left Column: Stacked Cards Deck */}
-              <div className="deck-container">
-                <div className="deck-title-row">
-                  <h2 className="deck-title">Rekening & E-Wallet Saya</h2>
-                  <a href="/accounts" className="deck-link">
-                    Lihat Semua →
+              <div style={{ display: 'flex', alignItems: 'center', gap: '20px' }}>
+                <div className="greeting-user" style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                  <span className="greeting-user-name" style={{ fontSize: '15px', fontWeight: '500', opacity: 0.9 }}>
+                    Hi {user?.name || 'Stefan'}!
+                  </span>
+                  <div className="greeting-user-avatar" style={{ 
+                    width: '38px', 
+                    height: '38px', 
+                    borderRadius: '50%', 
+                    background: 'linear-gradient(135deg, #38bdf8, #0ea5e9)',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    fontWeight: '700',
+                    color: '#ffffff',
+                    fontSize: '14px',
+                    boxShadow: '0 2px 8px rgba(56, 189, 248, 0.25)',
+                    userSelect: 'none'
+                  }}>
+                    {user ? getInitials(user.name) : 'ST'}
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Dashboard Title & Total Saldo Row */}
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', width: '100%', marginBottom: '24px', flexWrap: 'wrap', gap: '16px' }}>
+              <div>
+                <h1 className="page-title" style={{ fontSize: '32px', fontWeight: '800', letterSpacing: '-0.02em', marginBottom: '4px' }}>My Dashboard</h1>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
+                  <span style={{ fontSize: '12px', color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.05em', fontWeight: '600' }}>Total Saldo</span>
+                  <span style={{ fontSize: '28px', fontWeight: '800', color: '#10b981', letterSpacing: '-0.02em' }}>
+                    {formatRupiah(accounts.reduce((sum, acc) => sum + acc.balance, 0)).replace('Rp ', 'Rp')}
+                  </span>
+                </div>
+              </div>
+              
+              <div style={{ display: 'flex', gap: '8px', alignSelf: 'flex-end' }}>
+                <button className="btn btn-secondary btn-sm" onClick={() => setShowScanner(true)} style={{ borderRadius: '16px', fontSize: '12px', padding: '8px 16px', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                  <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z" />
+                    <circle cx="12" cy="13" r="4" />
+                  </svg>
+                  Scan Struk
+                </button>
+                <button className="btn btn-primary btn-sm" onClick={() => setShowForm(true)} style={{ borderRadius: '16px', fontSize: '12px', padding: '8px 16px', display: 'flex', alignItems: 'center', gap: '6px', fontWeight: '700' }}>
+                  <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                    <line x1="12" y1="5" x2="12" y2="19" />
+                    <line x1="5" y1="12" x2="19" y2="12" />
+                  </svg>
+                  Transaksi
+                </button>
+              </div>
+            </div>
+
+            {/* Revenue Flow Card */}
+            <div className="revenue-flow-card">
+              <div className="chart-header" style={{ marginBottom: '24px' }}>
+                <h3 className="chart-title" style={{ fontSize: '18px', fontWeight: '700' }}>Revenue Flow</h3>
+                <a href="/transactions" className="deck-link" style={{ fontSize: '13px' }}>
+                  View All &gt;
+                </a>
+              </div>
+
+              {/* Monthly patterned bar chart matching fintech mockup */}
+              <div style={{ display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between', height: '200px', padding: '0 10px', gap: '16px' }}>
+                {(summary?.monthlyData || []).map((item, idx) => {
+                  const maxVal = Math.max(...(summary?.monthlyData || []).map(d => Math.max(d.income, d.expense)), 1);
+                  const incomeHeight = (item.income / maxVal) * 100;
+                  const expenseHeight = (item.expense / maxVal) * 100;
+                  const netValue = item.income - item.expense;
+                  const height = Math.max((Math.abs(netValue) / maxVal) * 80, 10);
+                  
+                  // Highlight July / index 4 (or current active selection) in solid purple, others in patterned teal
+                  const isActive = idx === 4; 
+                  
+                  return (
+                    <div key={idx} style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', height: '100%', justifyContent: 'flex-end', gap: '12px' }}>
+                      <div style={{ 
+                        position: 'relative', 
+                        width: '100%', 
+                        maxHeight: '160px',
+                        height: `${height}%`,
+                        borderRadius: '20px',
+                        overflow: 'visible',
+                        background: isActive 
+                          ? 'var(--accent-primary)' 
+                          : 'rgba(255, 255, 255, 0.08)',
+                        border: isActive 
+                          ? '1px solid var(--accent-primary)' 
+                          : '1px solid rgba(255, 255, 255, 0.08)',
+                        boxShadow: isActive ? '0 10px 20px rgba(139, 92, 246, 0.3)' : 'none',
+                        cursor: 'pointer'
+                      }}
+                      className="revenue-bar-hover"
+                      >
+                        {/* Diagonal stripes pattern for non-active bars */}
+                        {!isActive && (
+                          <div style={{
+                            position: 'absolute',
+                            inset: 0,
+                            borderRadius: '19px',
+                            background: 'repeating-linear-gradient(45deg, rgba(255, 255, 255, 0.1), rgba(255, 255, 255, 0.1) 4px, transparent 4px, transparent 8px)'
+                          }} />
+                        )}
+
+                        {/* Top Indicator Dot for active month */}
+                        {isActive && (
+                          <div style={{
+                            position: 'absolute',
+                            top: '12px',
+                            left: '50%',
+                            transform: 'translateX(-50%)',
+                            width: '8px',
+                            height: '8px',
+                            borderRadius: '50%',
+                            background: '#ffffff'
+                          }} />
+                        )}
+
+                        {/* Active hover indicator popup tooltip */}
+                        {isActive && (
+                          <div style={{
+                            position: 'absolute',
+                            top: '-36px',
+                            left: '50%',
+                            transform: 'translateX(-50%)',
+                            background: 'var(--bg-secondary)',
+                            border: '1px solid var(--border-color)',
+                            borderRadius: '12px',
+                            padding: '4px 10px',
+                            fontSize: '11px',
+                            fontWeight: 'bold',
+                            whiteSpace: 'nowrap',
+                            boxShadow: '0 4px 10px rgba(0,0,0,0.3)',
+                            color: 'var(--text-primary)'
+                          }}>
+                            +{formatRupiah(netValue).replace('Rp ', 'Rp')}
+                          </div>
+                        )}
+                      </div>
+                      
+                      <span style={{ fontSize: '12px', fontWeight: '600', opacity: 0.6 }}>
+                        {getMonthName(item.month - 1).slice(0, 3)}
+                      </span>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+
+            {/* Bottom Row: Available & Summaries */}
+            <div className="dashboard-bottom-grid">
+              
+              {/* Card: Available categories */}
+              <div className="available-card">
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <h3 className="chart-title" style={{ fontSize: '16px', fontWeight: '700' }}>Kategori Pengeluaran</h3>
+                  <a href="/transactions" className="deck-link" style={{ fontSize: '12px' }}>
+                    View All &gt;
                   </a>
                 </div>
-                
-                <div className="cards-stack-wrapper">
-                  {accounts.map((account, idx) => {
-                    const N = accounts.length;
-                    const relativeIndex = (idx - activeCardIndex + N) % N;
-                    const isVisible = relativeIndex < 3;
-                    const zIndex = 10 - relativeIndex;
-                    const translateY = relativeIndex * -16;
-                    const scale = 1 - relativeIndex * 0.05;
-                    const opacity = relativeIndex === 0 ? 1 : relativeIndex === 1 ? 0.85 : relativeIndex === 2 ? 0.6 : 0;
-                    
-                    const brand = getCardBrand(account.name, account.type, account.accountNumber);
-                    
-                    return (
-                      <div
-                        key={account.id}
-                        className="wallet-card"
-                        style={{
-                          background: brand.gradient,
-                          transform: `translateY(${translateY}px) scale(${scale})`,
-                          opacity: opacity,
-                          zIndex: zIndex,
-                          pointerEvents: isVisible ? 'auto' : 'none',
-                          display: isVisible ? 'flex' : 'none',
-                        }}
-                        onClick={() => {
-                          setActiveCardIndex(idx);
-                          handleCardClick(account);
-                        }}
-                      >
-                        <div className="card-top">
-                          <div>
-                            {brand.logo}
-                            <div style={{ fontSize: '10px', opacity: 0.7, marginTop: 4, letterSpacing: '0.05em', textTransform: 'uppercase' }}>
-                              {brand.subtitle}
-                            </div>
-                          </div>
-                          <button
-                            className="card-plus-btn"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              setAccountError('');
-                              setShowAccountForm(true);
-                            }}
-                            title="Tambah Rekening"
-                          >
-                            +
-                          </button>
-                        </div>
-                        
-                        <div className="card-balance">
-                          {formatRupiah(account.balance)}
-                        </div>
-                        
-                        <div className="card-bottom">
-                          <span className="card-number">{brand.cardNumber}</span>
-                          <div className="card-meta">
-                            <span style={{ fontWeight: 600 }}>{account.type.toUpperCase()}</span>
-                            <span>{brand.expiry}</span>
-                          </div>
-                        </div>
+
+                <div className="available-doughnut-wrapper">
+                  {/* SVG Doughnut chart */}
+                  <div style={{ width: '110px', height: '110px' }}>
+                    <svg viewBox="0 0 100 100" width="100%" height="100%">
+                      {/* Segment 3 (Other: teal) */}
+                      <circle
+                        cx="50"
+                        cy="50"
+                        r="36"
+                        fill="transparent"
+                        stroke="#10b981"
+                        strokeWidth="11"
+                        strokeDasharray={circ}
+                        strokeDashoffset="0"
+                      />
+                      {/* Segment 2 (Clothes: yellow) */}
+                      <circle
+                        cx="50"
+                        cy="50"
+                        r="36"
+                        fill="transparent"
+                        stroke="#f59e0b"
+                        strokeWidth="11"
+                        strokeDasharray={circ}
+                        strokeDashoffset={strokeOther}
+                      />
+                      {/* Segment 1 (Food: purple) */}
+                      <circle
+                        cx="50"
+                        cy="50"
+                        r="36"
+                        fill="transparent"
+                        stroke="var(--accent-primary)"
+                        strokeWidth="11"
+                        strokeDasharray={circ}
+                        strokeDashoffset={strokeOther + strokeClothes}
+                      />
+                      
+                      {/* Inner text values */}
+                      <text x="50" y="47" textAnchor="middle" fontSize="8" fontWeight="800" fill="var(--text-primary)">
+                        {formatRupiah(catSummary.total).replace('Rp ', 'Rp')}
+                      </text>
+                      <text x="50" y="58" textAnchor="middle" fontSize="4.5" opacity="0.6" fill="var(--text-secondary)" fontWeight="600">
+                        Total Pengeluaran
+                      </text>
+                    </svg>
+                  </div>
+
+                  <div className="available-chart-legend">
+                    <div className="legend-row">
+                      <div className="legend-dot" style={{ background: 'var(--accent-primary)' }} />
+                      <div className="legend-info">
+                        <span className="legend-name">Makanan & Minum</span>
+                        <span className="legend-val">{formatRupiah(catSummary.food).replace('Rp ', 'Rp')}</span>
                       </div>
-                    );
-                  })}
+                    </div>
+                    <div className="legend-row">
+                      <div className="legend-dot" style={{ background: '#f59e0b' }} />
+                      <div className="legend-info">
+                        <span className="legend-name">Belanja & Baju</span>
+                        <span className="legend-val">{formatRupiah(catSummary.clothes).replace('Rp ', 'Rp')}</span>
+                      </div>
+                    </div>
+                    <div className="legend-row">
+                      <div className="legend-dot" style={{ background: '#10b981' }} />
+                      <div className="legend-info">
+                        <span className="legend-name">Lain-lain</span>
+                        <span className="legend-val">{formatRupiah(catSummary.other).replace('Rp ', 'Rp')}</span>
+                      </div>
+                    </div>
+                  </div>
                 </div>
-                
-                {/* Direct Selection Pills */}
-                <div className="account-pills">
-                  {accounts.map((account, idx) => (
-                    <button
+              </div>
+
+              {/* Column: Income & Expense cards */}
+              <div className="balance-summary-col">
+                <div className="summary-widget-card">
+                  <span className="summary-widget-title">Pemasukan Bulan Ini</span>
+                  <span className="summary-widget-value" style={{ color: 'var(--color-income)' }}>
+                    {formatRupiah(summary?.totalIncome || 0).replace('Rp ', 'Rp')}
+                  </span>
+                  <span className="summary-widget-subtitle">Periode {getMonthName(month - 1)} {year}</span>
+                  <div className="summary-widget-badge income">
+                    +12%
+                  </div>
+                </div>
+
+                <div className="summary-widget-card">
+                  <span className="summary-widget-title">Pengeluaran Bulan Ini</span>
+                  <span className="summary-widget-value" style={{ color: 'var(--color-expense)' }}>
+                    {formatRupiah(summary?.totalExpense || 0).replace('Rp ', 'Rp')}
+                  </span>
+                  <span className="summary-widget-subtitle">Periode {getMonthName(month - 1)} {year}</span>
+                  <div className="summary-widget-badge expense">
+                    +9%
+                  </div>
+                </div>
+              </div>
+
+            </div>
+
+          </div>
+
+          {/* KOLOM KANAN (SIDEBAR KARTU - DIKEMAS DALAM SATU FRAME WIDGET) */}
+          <div className="dashboard-right-col">
+            <div className="right-sidebar-frame">
+              <div className="deck-title-row">
+                <h2 className="deck-title" style={{ fontSize: '18px', fontWeight: '700' }}>My Card</h2>
+                <a href="/accounts" className="deck-link" style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                  View All &gt;
+                </a>
+              </div>
+              
+              <div className="cards-stack-wrapper">
+                {accounts.map((account, idx) => {
+                  const N = accounts.length;
+                  const relativeIndex = (idx - activeCardIndex + N) % N;
+                  const isVisible = relativeIndex < 3;
+                  const zIndex = 10 - relativeIndex;
+                  const translateY = relativeIndex * -16;
+                  const scale = 1 - relativeIndex * 0.05;
+                  const opacity = relativeIndex === 0 ? 1 : relativeIndex === 1 ? 0.85 : relativeIndex === 2 ? 0.6 : 0;
+                  
+                  const brand = getCardBrand(account.name, account.type, account.accountNumber);
+                  
+                  return (
+                    <div
                       key={account.id}
-                      className={`account-pill ${activeCardIndex === idx ? 'active' : ''}`}
+                      className="wallet-card"
+                      style={{
+                        background: brand.gradient,
+                        transform: `translateY(${translateY}px) scale(${scale})`,
+                        opacity: opacity,
+                        zIndex: zIndex,
+                        pointerEvents: isVisible ? 'auto' : 'none',
+                        display: isVisible ? 'flex' : 'none',
+                      }}
                       onClick={() => {
                         setActiveCardIndex(idx);
                         handleCardClick(account);
                       }}
                     >
-                      <span>{account.type === 'bank' ? '🏦' : account.type === 'e-wallet' ? '📱' : '💵'}</span>
-                      {account.name}
+                      <div className="card-top-row" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', width: '100%' }}>
+                        <span className="card-balance-label" style={{ fontSize: '13px', opacity: 0.8, fontWeight: 500 }}>Total Balance</span>
+                        <button
+                          className="card-plus-btn"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setAccountError('');
+                            setShowAccountForm(true);
+                          }}
+                          title="Tambah Rekening"
+                          style={{
+                            width: '28px',
+                            height: '28px',
+                            borderRadius: '50%',
+                            background: '#ffffff',
+                            color: '#10b981',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            fontWeight: 'bold',
+                            fontSize: '18px',
+                            boxShadow: '0 2px 6px rgba(0,0,0,0.15)'
+                          }}
+                        >
+                          +
+                        </button>
+                      </div>
+                      
+                      <div className="card-balance-amount" style={{ fontSize: '28px', fontWeight: '800', letterSpacing: '-0.02em', marginTop: '8px', color: '#ffffff' }}>
+                        {formatRupiah(account.balance).replace('Rp ', 'Rp')}
+                      </div>
+
+                      <div className="card-bottom-row" style={{ marginTop: 'auto', display: 'flex', justifyContent: 'space-between', alignItems: 'center', width: '100%' }}>
+                        <span style={{ fontSize: '11px', fontWeight: '600', opacity: 0.9, textTransform: 'uppercase', letterSpacing: '0.08em' }}>
+                          {account.name}
+                        </span>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+              
+              {/* Glassmorphic Transaction Panel (Inline Absolute Overlay) */}
+              {showCardPopup && selectedPopupAccount && (
+                <div 
+                  className="glass-overlap-panel"
+                  style={{
+                    background: `linear-gradient(135deg, ${getGlassTint(selectedPopupAccount.name, selectedPopupAccount.type)}, rgba(30, 41, 59, 0.7))`
+                  }}
+                >
+                  {/* Card Number, Expiry & Close Button */}
+                  <div style={{ position: 'relative', display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginTop: '4px' }}>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
+                      <div style={{ fontSize: '15px', fontWeight: '600', color: 'inherit', letterSpacing: '0.08em', fontFamily: 'monospace' }}>
+                        {getCardBrand(selectedPopupAccount.name, selectedPopupAccount.type, selectedPopupAccount.accountNumber).cardNumber}
+                      </div>
+                      <div style={{ fontSize: '11px', opacity: 0.6, letterSpacing: '0.05em' }}>
+                        {getCardBrand(selectedPopupAccount.name, selectedPopupAccount.type, selectedPopupAccount.accountNumber).expiry}
+                      </div>
+                    </div>
+                    
+                    <button
+                      className="glass-panel-close"
+                      onClick={() => setShowCardPopup(false)}
+                      title="Tutup Detail"
+                      style={{
+                        width: '26px',
+                        height: '26px',
+                        borderRadius: '50%',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        fontSize: '12px',
+                        cursor: 'pointer'
+                      }}
+                    >
+                      ✕
                     </button>
-                  ))}
-                </div>
-              </div>
-
-              {/* Right Column: Account Details */}
-              <div className="card details-card">
-                <h3 className="details-title">Detail Rekening</h3>
-                {accounts[activeCardIndex] && (
-                  <div className="details-list">
-                    <div className="details-row">
-                      <span className="details-label">Nama Rekening</span>
-                      <span className="details-value">{accounts[activeCardIndex].name}</span>
-                    </div>
-                    <div className="details-row">
-                      <span className="details-label">Jenis Saldo</span>
-                      <span className="details-value" style={{ textTransform: 'capitalize' }}>
-                        {accounts[activeCardIndex].type === 'bank' ? 'Bank' : accounts[activeCardIndex].type === 'e-wallet' ? 'E-Wallet' : 'Tunai / Cash'}
-                      </span>
-                    </div>
-                    <div className="details-row">
-                      <span className="details-label">Saldo Saat Ini</span>
-                      <span className="details-value" style={{ color: accounts[activeCardIndex].balance >= 0 ? 'var(--color-income)' : 'var(--color-expense)' }}>
-                        {formatRupiah(accounts[activeCardIndex].balance)}
-                      </span>
-                    </div>
-                    <div className="details-row">
-                      <span className="details-label">Nomor Rekening/ID</span>
-                      <span className="details-value" style={{ fontFamily: 'monospace' }}>
-                        {getCardBrand(accounts[activeCardIndex].name, accounts[activeCardIndex].type, accounts[activeCardIndex].accountNumber).cardNumber}
-                      </span>
-                    </div>
                   </div>
-                )}
-              </div>
+
+                  {/* Horizontal Divider */}
+                  <div className="glass-divider" />
+
+                  {/* Transactions Section */}
+                  <div>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
+                      <h3 className="glass-widget-title" style={{ fontSize: '15px', fontWeight: '700', color: 'inherit' }}>Transactions</h3>
+                      <a 
+                        href={`/transactions?accountId=${selectedPopupAccount.id}`} 
+                        style={{ fontSize: '12px', fontWeight: '600', opacity: 0.8, color: 'var(--accent-primary)', display: 'flex', alignItems: 'center', gap: '2px' }}
+                      >
+                        View All &gt;
+                      </a>
+                    </div>
+
+                    {popupLoading ? (
+                      <div style={{ display: 'flex', justifyContent: 'center', padding: '16px 0' }}>
+                        <div className="loading-dots">
+                          <div className="loading-dot" style={{ background: 'currentColor' }} />
+                          <div className="loading-dot" style={{ background: 'currentColor' }} />
+                          <div className="loading-dot" style={{ background: 'currentColor' }} />
+                        </div>
+                      </div>
+                    ) : popupTransactions.length === 0 ? (
+                      <div style={{ textAlign: 'center', padding: '16px 0', opacity: 0.6, fontSize: '13px', color: 'inherit' }}>
+                        Belum ada transaksi di rekening ini
+                      </div>
+                    ) : (
+                      <div className="glass-tx-list">
+                        {popupTransactions.map((tx: any) => {
+                          const isExpense = tx.type === 'expense';
+                          const amountFormatted = `${isExpense ? '- ' : '+ '}${formatRupiah(parseFloat(tx.amount))}`;
+                          
+                          const getTxLogo = (description: string, categoryIcon: string | null, isExpense: boolean) => {
+                            const desc = (description || '').toLowerCase();
+                            if (desc.includes('figma')) {
+                              return (
+                                <div style={{ 
+                                  width: '36px', 
+                                  height: '36px', 
+                                  borderRadius: '50%', 
+                                  background: 'rgba(10, 207, 131, 0.15)', 
+                                  display: 'flex', 
+                                  alignItems: 'center', 
+                                  justifyContent: 'center',
+                                  border: '1px solid rgba(10, 207, 131, 0.3)',
+                                  flexShrink: 0
+                                }}>
+                                  <div style={{ display: 'flex', position: 'relative', width: '12px', height: '18px' }}>
+                                    <div style={{ position: 'absolute', left: 0, top: 0, width: '6px', height: '6px', borderRadius: '3px 0 0 3px', background: '#F24E1E' }} />
+                                    <div style={{ position: 'absolute', left: '6px', top: 0, width: '6px', height: '6px', borderRadius: '3px', background: '#FF7262' }} />
+                                    <div style={{ position: 'absolute', left: 0, top: '6px', width: '6px', height: '6px', borderRadius: '3px 0 0 3px', background: '#A259FF' }} />
+                                    <div style={{ position: 'absolute', left: '6px', top: '6px', width: '6px', height: '6px', borderRadius: '3px', background: '#1ABCFE' }} />
+                                    <div style={{ position: 'absolute', left: 0, top: '12px', width: '6px', height: '6px', borderRadius: '3px', background: '#0ACF83' }} />
+                                  </div>
+                                </div>
+                              );
+                            }
+                            if (desc.includes('grammarly')) {
+                              return (
+                                <div style={{ 
+                                  width: '36px', 
+                                  height: '36px', 
+                                  borderRadius: '50%', 
+                                  background: 'rgba(16, 185, 129, 0.15)', 
+                                  display: 'flex', 
+                                  alignItems: 'center', 
+                                  justifyContent: 'center',
+                                  color: '#10b981',
+                                  border: '1px solid rgba(16, 185, 129, 0.3)',
+                                  flexShrink: 0
+                                }}>
+                                  <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
+                                    <path d="M21 12a9 9 0 11-9-9c2.52 0 4.93 1 6.74 2.74L15 9" />
+                                  </svg>
+                                </div>
+                              );
+                            }
+                            if (desc.includes('blender')) {
+                              return (
+                                <div style={{ 
+                                  width: '36px', 
+                                  height: '36px', 
+                                  borderRadius: '50%', 
+                                  background: 'rgba(234, 88, 12, 0.15)', 
+                                  display: 'flex', 
+                                  alignItems: 'center', 
+                                  justifyContent: 'center',
+                                  color: '#ea580c',
+                                  border: '1px solid rgba(234, 88, 12, 0.3)',
+                                  flexShrink: 0
+                                }}>
+                                  <svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor">
+                                    <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.41 0-8-3.59-8-8s3.59-8 8-8 8 3.59 8 8-3.59 8-8 8zm0-13c-2.76 0-5 2.24-5 5s2.24 5 5 5 5-2.24 5-5-2.24-5-5-5zm0 8c-1.66 0-3-1.34-3-3s1.34-3 3-3 3 1.34 3 3-1.34 3-3 3zm6.5-5.5h-2v-1h2v1zm-11 0h-2v-1h2v1z" />
+                                  </svg>
+                                </div>
+                              );
+                            }
+                            return (
+                              <div style={{ 
+                                width: '36px', 
+                                height: '36px', 
+                                borderRadius: '50%', 
+                                background: isExpense ? 'rgba(239, 68, 68, 0.15)' : 'rgba(34, 197, 94, 0.15)', 
+                                display: 'flex', 
+                                alignItems: 'center', 
+                                justifyContent: 'center',
+                                color: isExpense ? '#ef4444' : '#22c55e',
+                                border: isExpense ? '1px solid rgba(239, 68, 68, 0.3)' : '1px solid rgba(34, 197, 94, 0.3)',
+                                flexShrink: 0
+                              }}>
+                                <CategoryIcon name={tx.categoryName} icon={tx.categoryIcon} type={tx.type} size={20} />
+                              </div>
+                            );
+                          };
+
+                          return (
+                            <div key={tx.id} className="glass-tx-item" style={{ padding: '6px 0' }}>
+                              <div className="glass-tx-icon">
+                                {getTxLogo(tx.description || '', tx.categoryIcon, isExpense)}
+                              </div>
+                              <div className="glass-tx-info" style={{ marginLeft: '12px' }}>
+                                <div className="glass-tx-name" style={{ fontSize: '14px', fontWeight: '600', color: 'inherit' }}>
+                                  {tx.description || tx.categoryName || 'Transaksi'}
+                                </div>
+                              </div>
+                              <div className={`glass-tx-amount ${isExpense ? 'expense' : 'income'}`} style={{ fontSize: '14px', fontWeight: '700' }}>
+                                {amountFormatted.replace('Rp ', 'Rp')}
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
             </div>
-          )}
 
-          {/* Chart */}
-          {summary?.monthlyData && <Chart monthlyData={summary.monthlyData} />}
-
-          {/* Recent Transactions */}
-          <div className="section-header">
-            <h2 className="section-title">Transaksi Terakhir</h2>
-            <a href="/transactions" className="section-link">
-              Lihat Semua →
-            </a>
           </div>
-          <TransactionList
-            transactions={recentTransactions}
-            showActions={false}
-          />
-        </>
+
+        </div>
       )}
 
       {/* Transaction Form Modal */}
@@ -505,15 +939,14 @@ export default function DashboardPage() {
           <div className="modal" style={{ maxWidth: '400px' }} onClick={(e) => e.stopPropagation()}>
             <div className="modal-header">
               <h2 className="modal-title">Tambah Rekening</h2>
-              <button className="modal-close" onClick={() => setShowAccountForm(false)}>
-                ✕
-              </button>
+              <button className="modal-close" onClick={() => setShowAccountForm(false)}>✕</button>
             </div>
             
             <div className="modal-body">
               {accountError && (
-                <div className="login-error" style={{ marginBottom: 16 }}>
-                  ⚠️ {accountError}
+                <div className="login-error" style={{ marginBottom: 16, display: 'flex', alignItems: 'center', gap: '6px' }}>
+                  <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0 }}><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z" /><line x1="12" y1="9" x2="12" y2="13" /><line x1="12" y1="17" x2="12.01" y2="17" /></svg>
+                  {accountError}
                 </div>
               )}
               
@@ -535,9 +968,9 @@ export default function DashboardPage() {
                   value={newAccountType}
                   onChange={(e) => setNewAccountType(e.target.value as any)}
                 >
-                  <option value="bank">🏦 Bank / Rekening</option>
-                  <option value="e-wallet">📱 E-Wallet</option>
-                  <option value="cash">💵 Tunai / Cash</option>
+                  <option value="bank">Bank / Rekening</option>
+                  <option value="e-wallet">E-Wallet</option>
+                  <option value="cash">Tunai / Cash</option>
                 </select>
               </div>
 
@@ -558,161 +991,8 @@ export default function DashboardPage() {
                 Batal
               </button>
               <button className="btn btn-primary" onClick={handleAddAccount} disabled={accountLoading}>
-                {accountLoading ? <span className="loading-spinner" /> : '➕ Tambah'}
+                {accountLoading ? <span className="loading-spinner" /> : 'Tambah'}
               </button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Glassmorphic Transaction Popup */}
-      {showCardPopup && selectedPopupAccount && (
-        <div className="glass-modal-overlay" onClick={() => setShowCardPopup(false)}>
-          <div 
-            className="glass-modal-container" 
-            onClick={(e) => e.stopPropagation()}
-            style={{
-              background: `linear-gradient(135deg, ${getGlassTint(selectedPopupAccount.name, selectedPopupAccount.type)}, rgba(15, 23, 42, 0.6))`
-            }}
-          >
-            {/* Close Button */}
-            <button className="glass-modal-close" onClick={() => setShowCardPopup(false)}>✕</button>
-            
-            {/* Header / Account Card styling */}
-            <div style={{ marginTop: '8px' }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
-                <div>
-                  {getCardBrand(selectedPopupAccount.name, selectedPopupAccount.type, selectedPopupAccount.accountNumber).logo}
-                  <div style={{ fontSize: '11px', opacity: 0.7, marginTop: 4, letterSpacing: '0.05em', textTransform: 'uppercase' }}>
-                    {getCardBrand(selectedPopupAccount.name, selectedPopupAccount.type, selectedPopupAccount.accountNumber).subtitle}
-                  </div>
-                </div>
-                <span style={{ 
-                  fontSize: '20px', 
-                  fontWeight: '800', 
-                  color: '#ffffff'
-                }}>
-                  {formatRupiah(selectedPopupAccount.balance)}
-                </span>
-              </div>
-              <div style={{ marginTop: '24px', fontFamily: 'monospace', letterSpacing: '0.15em', fontSize: '14px', opacity: 0.8 }}>
-                {getCardBrand(selectedPopupAccount.name, selectedPopupAccount.type, selectedPopupAccount.accountNumber).cardNumber}
-              </div>
-              <div style={{ fontSize: '10px', opacity: 0.6, marginTop: '4px' }}>
-                VALID THRU {getCardBrand(selectedPopupAccount.name, selectedPopupAccount.type, selectedPopupAccount.accountNumber).expiry}
-              </div>
-            </div>
-
-            {/* Transactions Section */}
-            <div>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
-                <h3 className="glass-widget-title" style={{ fontSize: '18px', fontWeight: '700' }}>Transactions</h3>
-                <a 
-                  href={`/transactions?accountId=${selectedPopupAccount.id}`} 
-                  style={{ fontSize: '13px', fontWeight: '600', opacity: 0.8, display: 'flex', alignItems: 'center', gap: '4px' }}
-                >
-                  View All &gt;
-                </a>
-              </div>
-
-              {popupLoading ? (
-                <div style={{ display: 'flex', justifyContent: 'center', padding: '24px 0' }}>
-                  <div className="loading-dots">
-                    <div className="loading-dot" style={{ background: '#ffffff' }} />
-                    <div className="loading-dot" style={{ background: '#ffffff' }} />
-                    <div className="loading-dot" style={{ background: '#ffffff' }} />
-                  </div>
-                </div>
-              ) : popupTransactions.length === 0 ? (
-                <div style={{ textAlign: 'center', padding: '24px 0', opacity: 0.6, fontSize: '14px' }}>
-                  Belum ada transaksi di rekening ini
-                </div>
-              ) : (
-                <div className="glass-tx-list">
-                  {popupTransactions.map((tx: any) => {
-                    const isExpense = tx.type === 'expense';
-                    const amountFormatted = `${isExpense ? '- ' : '+ '}${formatRupiah(parseFloat(tx.amount))}`;
-                    const dateFormatted = new Date(tx.date).toLocaleDateString('id-ID', { day: 'numeric', month: 'short' });
-                    
-                    return (
-                      <div key={tx.id} className="glass-tx-item">
-                        <div className="glass-tx-icon">
-                          {tx.categoryIcon || (isExpense ? '💸' : '💰')}
-                        </div>
-                        <div className="glass-tx-info">
-                          <div className="glass-tx-name">{tx.description || tx.categoryName || 'Transaksi'}</div>
-                          <div className="glass-tx-date">{dateFormatted} • {tx.categoryName || 'Umum'}</div>
-                        </div>
-                        <div className={`glass-tx-amount ${isExpense ? 'expense' : 'income'}`}>
-                          {amountFormatted}
-                        </div>
-                      </div>
-                    );
-                  })}
-                </div>
-              )}
-            </div>
-
-            {/* Bottom Widgets */}
-            <div className="glass-widgets-row">
-              {/* Widget: Add Friends */}
-              <div className="glass-widget">
-                <h4 className="glass-widget-title">Add friends</h4>
-                <p className="glass-widget-desc">Invite friends to join and earn rewards together</p>
-                <div className="glass-avatars-row">
-                  <img src="https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=80&fit=crop&crop=faces&q=80" alt="Friend 1" className="glass-avatar" />
-                  <img src="https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=80&fit=crop&crop=faces&q=80" alt="Friend 2" className="glass-avatar" />
-                  <img src="https://images.unsplash.com/photo-1570295999919-56ceb5ecca61?w=80&fit=crop&crop=faces&q=80" alt="Friend 3" className="glass-avatar" />
-                  <div style={{
-                    width: '28px',
-                    height: '28px',
-                    borderRadius: '50%',
-                    background: 'rgba(255, 255, 255, 0.15)',
-                    border: '2px solid rgba(30, 41, 59, 0.8)',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    fontSize: '10px',
-                    fontWeight: 'bold',
-                    marginLeft: '-4px',
-                    color: '#ffffff'
-                  }}>
-                    +5
-                  </div>
-                </div>
-              </div>
-
-              {/* Widget: Spending */}
-              <div className="glass-widget" style={{ justifyContent: 'space-between' }}>
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
-                  <h4 className="glass-widget-title">Spending</h4>
-                  <p className="glass-widget-desc">Aktivitas bulanan</p>
-                </div>
-                {/* SVG wave curve graph exactly matching the picture */}
-                <div style={{ height: '36px', width: '100%', marginTop: '6px' }}>
-                  <svg viewBox="0 0 100 30" width="100%" height="100%" preserveAspectRatio="none">
-                    <defs>
-                      <linearGradient id="waveGrad" x1="0%" y1="0%" x2="0%" y2="100%">
-                        <stop offset="0%" stopColor="#38bdf8" stopOpacity="0.4" />
-                        <stop offset="100%" stopColor="#38bdf8" stopOpacity="0.0" />
-                      </linearGradient>
-                    </defs>
-                    <path 
-                      d="M0,25 C15,15 25,28 40,15 C55,2 70,25 85,12 C92,7 96,15 100,5" 
-                      fill="none" 
-                      stroke="#38bdf8" 
-                      strokeWidth="2.5" 
-                      strokeLinecap="round"
-                    />
-                    <path 
-                      d="M0,25 C15,15 25,28 40,15 C55,2 70,25 85,12 C92,7 96,15 100,5 L100,30 L0,30 Z" 
-                      fill="url(#waveGrad)"
-                    />
-                    {/* Glowing pulse dot at the end */}
-                    <circle cx="100" cy="5" r="2.5" fill="#38bdf8" />
-                  </svg>
-                </div>
-              </div>
             </div>
           </div>
         </div>

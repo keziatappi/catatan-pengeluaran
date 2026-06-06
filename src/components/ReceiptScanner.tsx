@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect, useRef } from 'react';
+import CategoryIcon from './CategoryIcon';
 
 interface Category {
   id: number;
@@ -281,9 +282,9 @@ export default function ReceiptScanner({
       >
         <div className="modal-header">
           <h2 className="modal-title">
-            {step === 'upload' && '📸 Scan Struk Belanja'}
-            {step === 'scanning' && '🤖 Menganalisis Gambar...'}
-            {step === 'review' && '📋 Review Hasil Scan'}
+            {step === 'upload' && 'Scan Struk Belanja'}
+            {step === 'scanning' && 'Menganalisis Gambar...'}
+            {step === 'review' && 'Review Hasil Scan'}
           </h2>
           <button className="modal-close" onClick={onClose} disabled={loading}>
             ✕
@@ -292,8 +293,13 @@ export default function ReceiptScanner({
 
         <div className="modal-body">
           {error && (
-            <div className="login-error" style={{ marginBottom: 16 }}>
-              ⚠️ {error}
+            <div className="login-error" style={{ marginBottom: 16, display: 'flex', alignItems: 'center', gap: '6px' }}>
+              <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0 }}>
+                <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z" />
+                <line x1="12" y1="9" x2="12" y2="13" />
+                <line x1="12" y1="17" x2="12.01" y2="17" />
+              </svg>
+              {error}
             </div>
           )}
 
@@ -307,7 +313,12 @@ export default function ReceiptScanner({
                   onDrop={handleDrop}
                   onClick={triggerCameraInput}
                 >
-                  <div className="scanner-dropzone-icon">📸</div>
+                  <div className="scanner-dropzone-icon">
+                    <svg viewBox="0 0 24 24" width="48" height="48" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" style={{ opacity: 0.5, color: '#10b981' }}>
+                      <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z" />
+                      <circle cx="12" cy="13" r="4" />
+                    </svg>
+                  </div>
                   <p className="scanner-dropzone-text">
                     Tap di sini untuk <strong>Membuka Kamera</strong>
                   </p>
@@ -321,9 +332,14 @@ export default function ReceiptScanner({
                         e.stopPropagation();
                         triggerFileInput();
                       }}
-                      style={{ width: '100%' }}
+                      style={{ width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px' }}
                     >
-                      🖼️ Pilih dari Galeri / File
+                      <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                        <rect x="3" y="3" width="18" height="18" rx="2" ry="2" />
+                        <circle cx="8.5" cy="8.5" r="1.5" />
+                        <polyline points="21 15 16 10 5 21" />
+                      </svg>
+                      Pilih dari Galeri / File
                     </button>
                   </div>
 
@@ -347,11 +363,18 @@ export default function ReceiptScanner({
                 <div className="scanner-preview-wrapper">
                   <img src={image} alt="Preview Struk" className="scanner-image-preview" />
                   <div className="scanner-preview-actions">
-                    <button className="btn btn-secondary btn-sm" onClick={() => setImage(null)}>
-                      🗑️ Ganti Gambar
+                    <button className="btn btn-secondary btn-sm" onClick={() => setImage(null)} style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                      <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                        <polyline points="3 6 5 6 21 6" />
+                        <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
+                      </svg>
+                      Ganti Gambar
                     </button>
-                    <button className="btn btn-primary btn-sm" onClick={handleScan}>
-                      🚀 Mulai Scan
+                    <button className="btn btn-primary btn-sm" onClick={handleScan} style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                      <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                        <polygon points="5 3 19 12 5 21 5 3" />
+                      </svg>
+                      Mulai Scan
                     </button>
                   </div>
                 </div>
@@ -416,7 +439,7 @@ export default function ReceiptScanner({
                     <option value="" disabled>Pilih Rekening / E-Wallet</option>
                     {accounts.map((acc) => (
                       <option key={acc.id} value={acc.id}>
-                        {acc.type === 'bank' ? '🏦' : acc.type === 'e-wallet' ? '📱' : '💵'} {acc.name}
+                        {acc.name} ({acc.type === 'bank' ? 'Bank' : acc.type === 'e-wallet' ? 'E-Wallet' : 'Tunai'})
                       </option>
                     ))}
                   </select>
@@ -433,7 +456,9 @@ export default function ReceiptScanner({
                         className={`category-item ${categoryId === cat.id ? 'selected' : ''}`}
                         onClick={() => setCategoryId(cat.id)}
                       >
-                        <span className="category-item-icon">{cat.icon}</span>
+                        <span className="category-item-icon" style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }}>
+                          <CategoryIcon name={cat.name} icon={cat.icon} type={cat.type} size={16} />
+                        </span>
                         <span className="category-item-name">{cat.name}</span>
                       </button>
                     ))}
@@ -447,10 +472,14 @@ export default function ReceiptScanner({
                     <button
                       type="button"
                       className="btn btn-secondary btn-sm"
-                      style={{ padding: '4px 8px', fontSize: '11px' }}
+                      style={{ padding: '4px 8px', fontSize: '11px', display: 'flex', alignItems: 'center', gap: '4px' }}
                       onClick={handleAddItem}
                     >
-                      ➕ Tambah Item
+                      <svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                        <line x1="12" y1="5" x2="12" y2="19" />
+                        <line x1="5" y1="12" x2="19" y2="12" />
+                      </svg>
+                      Tambah Item
                     </button>
                   </div>
 
@@ -499,8 +528,13 @@ export default function ReceiptScanner({
                     </strong>
                   </div>
                   {originalTotal > 0 && originalTotal !== calculatedTotal && (
-                    <div className="scanner-total-diff-warning">
-                      ⚠️ Total rincian berbeda dengan total struk yang terbaca (Rp {new Intl.NumberFormat('id-ID').format(originalTotal)})
+                    <div className="scanner-total-diff-warning" style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                      <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0 }}>
+                        <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z" />
+                        <line x1="12" y1="9" x2="12" y2="13" />
+                        <line x1="12" y1="17" x2="12.01" y2="17" />
+                      </svg>
+                      <span>Total rincian berbeda dengan total struk yang terbaca (Rp {new Intl.NumberFormat('id-ID').format(originalTotal)})</span>
                     </div>
                   )}
                 </div>
@@ -512,22 +546,25 @@ export default function ReceiptScanner({
         <div className="modal-footer">
           {step === 'review' ? (
             <>
-              <button className="btn btn-secondary" onClick={resetScanner} disabled={loading}>
-                🔄 Ulangi
+              <button className="btn btn-secondary" onClick={resetScanner} disabled={loading} style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M21.5 2v6h-6M21.34 15.57a10 10 0 1 1-.57-8.38l5.67-5.67" />
+                </svg>
+                Ulangi
               </button>
               <button
                 className="btn btn-secondary"
                 onClick={handleSaveTotalOnly}
                 disabled={loading || !categoryId}
               >
-                💾 Simpan Total Saja
+                Simpan Total Saja
               </button>
               <button
                 className="btn btn-primary"
                 onClick={handleSaveItemized}
                 disabled={loading || !categoryId || items.length === 0}
               >
-                {loading ? <span className="loading-spinner" /> : '📋 Simpan Rincian'}
+                {loading ? <span className="loading-spinner" /> : 'Simpan Rincian'}
               </button>
             </>
           ) : (
