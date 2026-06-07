@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
-import { getMonthName, formatRupiah } from '@/lib/utils';
+import { getMonthName, formatRupiah, formatCompactRupiah } from '@/lib/utils';
 import TransactionForm from '@/components/TransactionForm';
 import ReceiptScanner from '@/components/ReceiptScanner';
 import CategoryIcon from '@/components/CategoryIcon';
@@ -626,46 +626,94 @@ export default function DashboardPage() {
               </div>
 
               {/* Monthly side-by-side bar chart */}
-              <div className='chart-bars' style={{ height: '220px', padding: '0 8px', marginTop: '16px' }}>
-                {(summary?.monthlyData || []).map((item, idx) => {
-                  const maxVal = Math.max(
-                    ...((summary?.monthlyData || []).map(d => Math.max(d.income, d.expense))),
-                    1
-                  );
-                  const getBarHeight = (value: number) => {
-                    return Math.max((value / maxVal) * 100, 2);
-                  };
+              {(() => {
+                const maxVal = Math.max(
+                  ...((summary?.monthlyData || []).map(d => Math.max(d.income, d.expense))),
+                  1
+                );
+                const scaleMax = maxVal * 1.15;
 
-                  return (
-                    <div key={idx} className='chart-bar-group'>
-                      <div className='chart-bar-wrapper'>
-                        {/* Income Bar */}
-                        <div
-                          className='chart-bar income'
-                          style={{ height: `${getBarHeight(item.income)}%` }}
-                        >
-                          <div className='chart-bar-tooltip'>
-                            ↑ {formatRupiah(item.income).replace('Rp ', 'Rp')}
-                          </div>
-                        </div>
-                        
-                        {/* Expense Bar */}
-                        <div
-                          className='chart-bar expense'
-                          style={{ height: `${getBarHeight(item.expense)}%` }}
-                        >
-                          <div className='chart-bar-tooltip'>
-                            ↓ {formatRupiah(item.expense).replace('Rp ', 'Rp')}
-                          </div>
-                        </div>
+                return (
+                  <div className="chart-container-wrapper">
+                    {/* Y-Axis */}
+                    <div className="chart-y-axis">
+                      <div className="chart-y-axis-ticks">
+                        <span className="chart-y-axis-tick" style={{ top: '0%' }}>{formatRupiah(scaleMax).replace(/\s/g, '')}</span>
+                        <span className="chart-y-axis-tick" style={{ top: '33.3%' }}>{formatRupiah(scaleMax * 0.67).replace(/\s/g, '')}</span>
+                        <span className="chart-y-axis-tick" style={{ top: '66.7%' }}>{formatRupiah(scaleMax * 0.33).replace(/\s/g, '')}</span>
+                        <span className="chart-y-axis-tick" style={{ top: '100%' }}>Rp0</span>
                       </div>
-                      <span className='chart-bar-label' style={{ marginTop: '8px' }}>
-                        {getMonthName(item.month - 1).slice(0, 3)}
-                      </span>
+                      <div style={{ height: '27px' }} />
                     </div>
-                  );
-                })}
-              </div>
+
+                    {/* Chart Plot Area */}
+                    <div className="chart-plot-area">
+                      {/* Grid Lines */}
+                      <div className="chart-grid-lines">
+                        <div className="chart-grid-line" />
+                        <div className="chart-grid-line" />
+                        <div className="chart-grid-line" />
+                        <div className="chart-grid-line baseline" />
+                      </div>
+
+                      {/* Chart Bars */}
+                      <div className="chart-bars">
+                        {(summary?.monthlyData || []).map((item, idx) => {
+                          const getBarHeight = (value: number) => {
+                            return Math.max((value / scaleMax) * 100, 2);
+                          };
+
+                          const heightIncome = getBarHeight(item.income);
+                          const heightExpense = getBarHeight(item.expense);
+                          const isClose = Math.abs(heightIncome - heightExpense) < 12;
+
+                          const incomeLabelBottom = isClose && heightIncome < heightExpense ? 'calc(100% + 16px)' : 'calc(100% + 4px)';
+                          const expenseLabelBottom = isClose && heightExpense <= heightIncome ? 'calc(100% + 16px)' : 'calc(100% + 4px)';
+
+                          return (
+                            <div key={idx} className="chart-bar-group">
+                              <div className="chart-bar-wrapper">
+                                {/* Income Bar */}
+                                <div
+                                  className="chart-bar income"
+                                  style={{ height: `${heightIncome}%` }}
+                                >
+                                  {item.income > 0 && (
+                                    <div className="chart-bar-value income" style={{ bottom: incomeLabelBottom }}>
+                                      {formatCompactRupiah(item.income)}
+                                    </div>
+                                  )}
+                                  <div className="chart-bar-tooltip">
+                                    ↑ {formatRupiah(item.income).replace(/\s/g, '')}
+                                  </div>
+                                </div>
+
+                                {/* Expense Bar */}
+                                <div
+                                  className="chart-bar expense"
+                                  style={{ height: `${heightExpense}%` }}
+                                >
+                                  {item.expense > 0 && (
+                                    <div className="chart-bar-value expense" style={{ bottom: expenseLabelBottom }}>
+                                      {formatCompactRupiah(item.expense)}
+                                    </div>
+                                  )}
+                                  <div className="chart-bar-tooltip">
+                                    ↓ {formatRupiah(item.expense).replace(/\s/g, '')}
+                                  </div>
+                                </div>
+                              </div>
+                              <span className="chart-bar-label" style={{ marginTop: '8px' }}>
+                                {getMonthName(item.month - 1).slice(0, 3)}
+                              </span>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  </div>
+                );
+              })()}
             </div>
 
             <div className="dashboard-bottom-grid">

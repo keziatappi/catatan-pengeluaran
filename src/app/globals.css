@@ -522,11 +522,97 @@ ul, ol {
   border-radius: 50%;
 }
 
+.chart-container-wrapper {
+  display: flex;
+  gap: 12px;
+  height: 220px;
+  margin-top: 16px;
+  width: 100%;
+}
+
+.chart-y-axis {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  width: 55px;
+  flex-shrink: 0;
+}
+
+.chart-y-axis-ticks {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  align-items: flex-end;
+  font-size: 10px;
+  color: var(--text-tertiary);
+  padding-right: 8px;
+  border-right: 1px solid var(--border-color);
+  position: relative;
+}
+
+.chart-y-axis-tick {
+  position: absolute;
+  right: 8px;
+  transform: translateY(-50%);
+  white-space: nowrap;
+}
+
+.chart-plot-area {
+  flex: 1;
+  position: relative;
+  height: 100%;
+}
+
+.chart-grid-lines {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: calc(100% - 27px);
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  pointer-events: none;
+  z-index: 0;
+}
+
+.chart-grid-line {
+  width: 100%;
+  height: 0;
+  border-top: 1px dashed var(--border-color);
+  opacity: 0.35;
+}
+
+.chart-grid-line.baseline {
+  border-top: 1px solid var(--border-color);
+  opacity: 0.8;
+}
+
+.chart-bar-value {
+  position: absolute;
+  left: 50%;
+  transform: translateX(-50%);
+  font-size: 9px;
+  font-weight: 700;
+  white-space: nowrap;
+  pointer-events: none;
+  transition: all var(--transition-fast);
+}
+
+.chart-bar-value.income {
+  color: var(--color-income);
+}
+
+.chart-bar-value.expense {
+  color: var(--color-expense);
+}
+
 .chart-bars {
   display: flex;
   align-items: flex-end;
   gap: 12px;
-  height: 200px;
+  height: 100%;
   padding: 0 8px;
 }
 
@@ -1610,9 +1696,31 @@ ul, ol {
   }
 
   /* Chart bars */
+  .chart-container-wrapper {
+    height: 180px;
+    gap: 8px;
+  }
+
+  .chart-y-axis {
+    width: 45px;
+  }
+
+  .chart-y-axis-ticks {
+    font-size: 9px;
+    padding-right: 6px;
+  }
+
+  .chart-y-axis-tick {
+    right: 6px;
+  }
+
+  .chart-bar-value {
+    font-size: 8px;
+  }
+
   .chart-bars {
     gap: 6px;
-    height: 160px;
+    height: 100%;
   }
 
   .chart-bar {
