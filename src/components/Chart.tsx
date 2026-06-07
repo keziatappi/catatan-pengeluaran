@@ -43,17 +43,6 @@ export default function Chart({ monthlyData }: ChartProps) {
       </div>
 
       <div className="chart-container-wrapper">
-        {/* Y-Axis */}
-        <div className="chart-y-axis">
-          <div className="chart-y-axis-ticks">
-            <span className="chart-y-axis-tick" style={{ top: '0%' }}>{formatRupiah(scaleMax).replace(/\s/g, '')}</span>
-            <span className="chart-y-axis-tick" style={{ top: '33.3%' }}>{formatRupiah(scaleMax * 0.67).replace(/\s/g, '')}</span>
-            <span className="chart-y-axis-tick" style={{ top: '66.7%' }}>{formatRupiah(scaleMax * 0.33).replace(/\s/g, '')}</span>
-            <span className="chart-y-axis-tick" style={{ top: '100%' }}>Rp0</span>
-          </div>
-          <div style={{ height: '27px' }} />
-        </div>
-
         {/* Chart Plot Area */}
         <div className="chart-plot-area">
           {/* Grid Lines */}
@@ -91,9 +80,6 @@ export default function Chart({ monthlyData }: ChartProps) {
                           {formatCompactRupiah(item.income)}
                         </div>
                       )}
-                      <div className="chart-bar-tooltip">
-                        ↑ {formatRupiah(item.income).replace(/\s/g, '')}
-                      </div>
                     </div>
 
                     {/* Expense Bar */}
@@ -106,9 +92,6 @@ export default function Chart({ monthlyData }: ChartProps) {
                           {formatCompactRupiah(item.expense)}
                         </div>
                       )}
-                      <div className="chart-bar-tooltip">
-                        ↓ {formatRupiah(item.expense).replace(/\s/g, '')}
-                      </div>
                     </div>
                   </div>
                   <span className="chart-bar-label" style={{ marginTop: '8px' }}>
