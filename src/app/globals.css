@@ -884,7 +884,8 @@ ul, ol {
   width: 100%;
   max-width: 480px;
   max-height: 90vh;
-  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
   transform: translateY(20px) scale(0.95);
   animation: slideUp var(--transition-normal) forwards;
 }
@@ -894,6 +895,7 @@ ul, ol {
   align-items: center;
   justify-content: space-between;
   padding: 24px 28px 0;
+  flex-shrink: 0;
 }
 
 .modal-title {
@@ -916,6 +918,8 @@ ul, ol {
 
 .modal-body {
   padding: 24px 28px;
+  flex: 1;
+  overflow-y: auto;
 }
 
 .modal-footer {
@@ -923,6 +927,7 @@ ul, ol {
   display: flex;
   gap: 12px;
   justify-content: flex-end;
+  flex-shrink: 0;
 }
 
 /* ===== TYPE TOGGLE ===== */
@@ -1489,16 +1494,11 @@ ul, ol {
   /* Dashboard grid: single column, My Card at top on mobile */
   .dashboard-grid-layout {
     grid-template-columns: 1fr !important;
+    grid-template-areas:
+      "header"
+      "right"
+      "left" !important;
     gap: 20px;
-  }
-
-  /* Reorder: My Card frame goes to the top on mobile */
-  .dashboard-right-col {
-    order: -1;
-  }
-
-  .dashboard-left-col {
-    order: 1;
   }
 
   /* Right sidebar frame adjustments for mobile */
@@ -2503,13 +2503,32 @@ input[type="date"]::-webkit-calendar-picker-indicator {
 .dashboard-grid-layout {
   display: grid;
   grid-template-columns: 1.8fr 1fr;
+  grid-template-areas:
+    "header right"
+    "left right";
   gap: 32px;
   align-items: start;
 }
 
+.dashboard-header-block {
+  grid-area: header;
+}
+
+.dashboard-left-col {
+  grid-area: left;
+}
+
+.dashboard-right-col {
+  grid-area: right;
+}
+
 @media (max-width: 1100px) {
   .dashboard-grid-layout {
-    grid-template-columns: 1fr;
+    grid-template-columns: 1fr !important;
+    grid-template-areas:
+      "header"
+      "right"
+      "left" !important;
     gap: 24px;
   }
 }
@@ -2787,10 +2806,56 @@ input[type="date"]::-webkit-calendar-picker-indicator {
 
 :root.light .glass-panel-close:hover {
   background: rgba(0, 0, 0, 0.1) !important;
+}/* ===== BATAS PENGELUARAN WIDGET STYLES ===== */
+.limit-progress-bar-bg {
+  width: 100%;
+  height: 6px;
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: var(--radius-full);
+  margin-top: 4px;
+  overflow: hidden;
 }
 
+:root.light .limit-progress-bar-bg {
+  background: rgba(0, 0, 0, 0.08);
+}
 
+.limit-progress-bar-fill {
+  height: 100%;
+  border-radius: var(--radius-full);
+  transition: width var(--transition-slow);
+}
 
+.limit-setup-link {
+  font-size: 11px;
+  color: var(--accent-primary);
+  opacity: 0.8;
+  text-decoration: underline;
+  margin-top: 4px;
+  transition: opacity var(--transition-fast);
+}
 
+.limit-setup-link:hover {
+  opacity: 1;
+}
 
+/* Ensure date input behaves on iOS and fits container */
+input[type="date"] {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 100% !important;
+  max-width: 100% !important;
+  min-width: 0 !important;
+  box-sizing: border-box !important;
+}
 
+input[type="date"]::-webkit-datetime-edit {
+  display: flex;
+  padding: 0;
+  align-items: center;
+}
+
+input[type="date"]::-webkit-datetime-edit-fields-wrapper {
+  display: flex;
+  padding: 0;
+}

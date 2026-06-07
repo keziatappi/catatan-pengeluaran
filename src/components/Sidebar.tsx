@@ -162,6 +162,9 @@ export default function Sidebar() {
             title={theme === 'dark' ? 'Mode Terang' : 'Mode Gelap'}
           >
             {theme === 'dark' ? sunIcon : moonIcon}
+            <span className="sidebar-nav-label">
+              {theme === 'dark' ? 'Mode Terang' : 'Mode Gelap'}
+            </span>
           </button>
         </div>
 

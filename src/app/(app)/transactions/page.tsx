@@ -46,6 +46,8 @@ export default function TransactionsPage() {
   const [filterAccount, setFilterAccount] = useState('');
   const [filterStartDate, setFilterStartDate] = useState('');
   const [filterEndDate, setFilterEndDate] = useState('');
+  const [startDateFocus, setStartDateFocus] = useState(false);
+  const [endDateFocus, setEndDateFocus] = useState(false);
 
   // Modals
   const [showForm, setShowForm] = useState(false);
@@ -262,9 +264,11 @@ export default function TransactionsPage() {
         </select>
 
         <input
-          type="date"
-          className="form-input"
-          placeholder="Dari tanggal"
+          type={startDateFocus || filterStartDate ? 'date' : 'text'}
+          onFocus={() => setStartDateFocus(true)}
+          onBlur={() => setStartDateFocus(false)}
+          className='form-input'
+          placeholder='Dari tanggal'
           value={filterStartDate}
           onChange={(e) => {
             setFilterStartDate(e.target.value);
@@ -273,9 +277,11 @@ export default function TransactionsPage() {
         />
 
         <input
-          type="date"
-          className="form-input"
-          placeholder="Sampai tanggal"
+          type={endDateFocus || filterEndDate ? 'date' : 'text'}
+          onFocus={() => setEndDateFocus(true)}
+          onBlur={() => setEndDateFocus(false)}
+          className='form-input'
+          placeholder='Sampai tanggal'
           value={filterEndDate}
           onChange={(e) => {
             setFilterEndDate(e.target.value);

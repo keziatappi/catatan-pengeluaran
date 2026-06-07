@@ -7,6 +7,8 @@ export const users = pgTable('users', {
   username: varchar('username', { length: 50 }).unique().notNull(),
   password: varchar('password', { length: 255 }).notNull(),
   name: varchar('name', { length: 100 }).notNull(),
+  weeklyLimit: decimal('weekly_limit', { precision: 15, scale: 2 }),
+  monthlyLimit: decimal('monthly_limit', { precision: 15, scale: 2 }),
   createdAt: timestamp('created_at').defaultNow().notNull(),
 });
 

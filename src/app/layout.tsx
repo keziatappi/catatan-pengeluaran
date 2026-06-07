@@ -1,5 +1,6 @@
 import type { Metadata, Viewport } from "next";
 import "./globals.css";
+import SWRegister from "@/components/SWRegister";
 
 export const viewport: Viewport = {
   width: "device-width",
@@ -30,7 +31,10 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="id">
-      <body>{children}</body>
+      <body>
+        <SWRegister />
+        {children}
+      </body>
     </html>
   );
 }

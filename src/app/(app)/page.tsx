@@ -152,7 +152,6 @@ function getCardBrand(name: string, type?: string, accountNumber?: string | null
     )
   };
 }
-
 export default function DashboardPage() {
   const [summary, setSummary] = useState<SummaryData | null>(null);
   const [recentTransactions, setRecentTransactions] = useState<TransactionData[]>([]);
@@ -179,7 +178,20 @@ export default function DashboardPage() {
   const [popupLoading, setPopupLoading] = useState(false);
   const [selectedPopupAccount, setSelectedPopupAccount] = useState<Account | null>(null);
 
-  const getGlassTint = (name: string, type: string) => {
+  // Limits and Alerts States
+  const [totalWeeklyExpense, setTotalWeeklyExpense] = useState(0);
+  const [weeklyLimit, setWeeklyLimit] = useState<number | null>(null);
+  const [monthlyLimit, setMonthlyLimit] = useState<number | null>(null);
+
+  // Limits Modal States
+  const [showLimitsModal, setShowLimitsModal] = useState(false);
+  const [inputWeeklyLimit, setInputWeeklyLimit] = useState('');
+  const [inputMonthlyLimit, setInputMonthlyLimit] = useState('');
+  const [limitFormLoading, setLimitFormLoading] = useState(false);
+  const [limitFormError, setLimitFormError] = useState('');
+
+  // Limit Warnings
+  const [alerts, setAlerts] = useState<{ id: string; title: string; body: string }[]>([]);  const getGlassTint = (name: string, type: string) => {
     const lowercaseName = name.toLowerCase();
     if (lowercaseName.includes('bni')) return 'rgba(0, 94, 106, 0.45)';
     if (lowercaseName.includes('mandiri')) return 'rgba(28, 53, 94, 0.45)';
@@ -282,6 +294,9 @@ export default function DashboardPage() {
       const userData = await userRes.json();
 
       setSummary(summaryData);
+      setTotalWeeklyExpense(summaryData.totalWeeklyExpense || 0);
+      setWeeklyLimit(summaryData.weeklyLimit || null);
+      setMonthlyLimit(summaryData.monthlyLimit || null);
       setRecentTransactions(txData.data || []);
       setAccounts(accountsData || []);
       if (userData.user) setUser(userData.user);
@@ -302,11 +317,118 @@ export default function DashboardPage() {
       setLoading(false);
     }
   }, [month, year]);
-
   useEffect(() => {
     fetchData();
   }, [fetchData]);
 
+  // Request notifications permission
+  useEffect(() => {
+    if (typeof window !== 'undefined' && 'Notification' in window && Notification.permission === 'default') {
+      Notification.requestPermission();
+    }
+  }, []);
+
+  // Alert triggering
+  const triggerNotification = useCallback((id: string, title: string, body: string) => {
+    setAlerts((prev) => {
+      if (prev.some((a) => a.id === id)) return prev;
+      return [...prev, { id, title, body }];
+    });
+
+    const storageKey = `dompetku-alert-${id}-${new Date().toISOString().split('T')[0]}`;
+    if (localStorage.getItem(storageKey)) return;
+
+    if ('Notification' in window) {
+      if (Notification.permission === 'granted') {
+        if ('serviceWorker' in navigator) {
+          navigator.serviceWorker.ready.then((reg) => {
+            reg.showNotification(title, {
+              body,
+              icon: '/apple-icon.png',
+              badge: '/favicon.ico',
+              vibrate: [200, 100, 200],
+              tag: id,
+              renotify: true,
+            } as any);
+          });
+        } else {
+          new Notification(title, { body, icon: '/apple-icon.png' });
+        }
+        localStorage.setItem(storageKey, 'true');
+      }
+    }
+  }, []);
+
+  // Check limits
+  useEffect(() => {
+    if (!summary) return;
+
+    if (weeklyLimit && weeklyLimit > 0) {
+      const ratio = totalWeeklyExpense / weeklyLimit;
+      if (ratio >= 1.0) {
+        triggerNotification(
+          'weekly-exceeded',
+          'Batas Pengeluaran Mingguan Tercapai! ⚠️',
+          `Pengeluaran mingguan Anda Rp ${new Intl.NumberFormat('id-ID').format(totalWeeklyExpense)} melebihi batas Rp ${new Intl.NumberFormat('id-ID').format(weeklyLimit)}.`
+        );
+      } else if (ratio >= 0.8) {
+        triggerNotification(
+          'weekly-warning',
+          'Batas Pengeluaran Mingguan Hampir Tercapai! ⚠️',
+          `Pengeluaran mingguan Anda Rp ${new Intl.NumberFormat('id-ID').format(totalWeeklyExpense)} hampir mencapai batas Rp ${new Intl.NumberFormat('id-ID').format(weeklyLimit)}.`
+        );
+      }
+    }
+
+    if (monthlyLimit && monthlyLimit > 0) {
+      const ratio = (summary.totalExpense || 0) / monthlyLimit;
+      if (ratio >= 1.0) {
+        triggerNotification(
+          'monthly-exceeded',
+          'Batas Pengeluaran Bulanan Tercapai! ⚠️',
+          `Pengeluaran bulanan Anda Rp ${new Intl.NumberFormat('id-ID').format(summary.totalExpense)} melebihi batas Rp ${new Intl.NumberFormat('id-ID').format(monthlyLimit)}.`
+        );
+      } else if (ratio >= 0.8) {
+        triggerNotification(
+          'monthly-warning',
+          'Batas Pengeluaran Bulanan Hampir Tercapai! ⚠️',
+          `Pengeluaran bulanan Anda Rp ${new Intl.NumberFormat('id-ID').format(summary.totalExpense)} hampir mencapai batas Rp ${new Intl.NumberFormat('id-ID').format(monthlyLimit)}.`
+        );
+      }
+    }
+  }, [summary, weeklyLimit, monthlyLimit, totalWeeklyExpense, triggerNotification]);
+
+  // Limits saving handler
+  const handleSaveLimits = async () => {
+    setLimitFormLoading(true);
+    setLimitFormError('');
+    try {
+      const res = await fetch('/api/user/limits', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          weeklyLimit: inputWeeklyLimit === '' ? null : parseFloat(inputWeeklyLimit),
+          monthlyLimit: inputMonthlyLimit === '' ? null : parseFloat(inputMonthlyLimit),
+        }),
+      });
+
+      if (!res.ok) {
+        const errData = await res.json();
+        throw new Error(errData.error || 'Gagal menyimpan batas pengeluaran');
+      }
+
+      const data = await res.json();
+      setWeeklyLimit(data.weeklyLimit || null);
+      setMonthlyLimit(data.monthlyLimit || null);
+      setAlerts([]); // Reset existing alert banners to recheck
+      await fetchData();
+      setShowLimitsModal(false);
+    } catch (err: any) {
+      setLimitFormError(err.message || 'Terjadi kesalahan');
+    } finally {
+      setLimitFormLoading(false);
+    }
+  };
   // Helper untuk inisial nama
   const getInitials = (name: string) => {
     return name
@@ -367,35 +489,70 @@ export default function DashboardPage() {
           </div>
         </div>
       ) : (
-        <div className="dashboard-grid-layout animate-in">
+        <div className='dashboard-grid-layout animate-in'>
           
-          {/* KOLOM KIRI (UTAMA) */}
-          <div className="dashboard-left-col">
-            
+          {/* HEADER BLOCK (SPANS FULL WIDTH ON DESKTOP, PLACED AT THE TOP) */}
+          <div className='dashboard-header-block'>
+            {/* Limit Warning Banners */}
+            {alerts.map((alert) => (
+              <div 
+                key={alert.id} 
+                className='login-error animate-in' 
+                style={{ 
+                  marginBottom: 16, 
+                  background: alert.id.includes('exceeded') ? 'rgba(239, 68, 68, 0.15)' : 'rgba(245, 158, 11, 0.15)',
+                  borderColor: alert.id.includes('exceeded') ? 'var(--color-expense)' : 'var(--color-warning)',
+                  color: alert.id.includes('exceeded') ? 'var(--color-danger)' : 'var(--color-warning)',
+                  display: 'flex', 
+                  alignItems: 'center', 
+                  justifyContent: 'space-between',
+                  gap: '8px'
+                }}
+              >
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  <svg viewBox='0 0 24 24' width='18' height='18' fill='none' stroke='currentColor' strokeWidth='2.5' strokeLinecap='round' strokeLinejoin='round' style={{ flexShrink: 0 }}>
+                    <path d='M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z' />
+                    <line x1='12' y1='9' x2='12' y2='13' />
+                    <line x1='12' y1='17' x2='12.01' y2='17' />
+                  </svg>
+                  <div>
+                    <strong style={{ display: 'block', fontSize: '14px' }}>{alert.title}</strong>
+                    <span style={{ fontSize: '13px', opacity: 0.9 }}>{alert.body}</span>
+                  </div>
+                </div>
+                <button 
+                  onClick={() => setAlerts(prev => prev.filter(a => a.id !== alert.id))}
+                  style={{ color: 'inherit', background: 'none', border: 'none', cursor: 'pointer', padding: '4px', fontSize: '14px', fontWeight: 'bold' }}
+                >
+                  ✕
+                </button>
+              </div>
+            ))}
+
             {/* Top Greeting & Search */}
-            <div className="greeting-row" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', width: '100%', marginBottom: '16px' }}>
-              <div className="search-payment-wrapper" style={{ width: '100%', maxWidth: '380px' }}>
-                <span className="search-payment-icon">
-                  <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" style={{ opacity: 0.6 }}>
-                    <circle cx="11" cy="11" r="8" />
-                    <line x1="21" y1="21" x2="16.65" y2="16.65" />
+            <div className='greeting-row' style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', width: '100%', marginBottom: '16px' }}>
+              <div className='search-payment-wrapper' style={{ width: '100%', maxWidth: '380px' }}>
+                <span className='search-payment-icon'>
+                  <svg viewBox='0 0 24 24' width='16' height='16' fill='none' stroke='currentColor' strokeWidth='2.2' strokeLinecap='round' strokeLinejoin='round' style={{ opacity: 0.6 }}>
+                    <circle cx='11' cy='11' r='8' />
+                    <line x1='21' y1='21' x2='16.65' y2='16.65' />
                   </svg>
                 </span>
                 <input 
-                  type="text" 
-                  className="search-payment-input" 
-                  placeholder="Search payment"
+                  type='text' 
+                  className='search-payment-input' 
+                  placeholder='Search payment'
                   onClick={() => window.location.href = '/transactions'}
                   style={{ background: 'rgba(255, 255, 255, 0.03)', border: '1px solid rgba(255, 255, 255, 0.08)' }}
                 />
               </div>
 
               <div style={{ display: 'flex', alignItems: 'center', gap: '20px' }}>
-                <div className="greeting-user" style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                  <span className="greeting-user-name" style={{ fontSize: '15px', fontWeight: '500', opacity: 0.9 }}>
+                <div className='greeting-user' style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                  <span className='greeting-user-name' style={{ fontSize: '15px', fontWeight: '500', opacity: 0.9 }}>
                     Hi {user?.name || 'Stefan'}!
                   </span>
-                  <div className="greeting-user-avatar" style={{ 
+                  <div className='greeting-user-avatar' style={{ 
                     width: '38px', 
                     height: '38px', 
                     borderRadius: '50%', 
@@ -416,9 +573,9 @@ export default function DashboardPage() {
             </div>
 
             {/* Dashboard Title & Total Saldo Row */}
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', width: '100%', marginBottom: '24px', flexWrap: 'wrap', gap: '16px' }}>
+            <div className='dashboard-title-row' style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', width: '100%', marginBottom: '24px', flexWrap: 'wrap', gap: '16px' }}>
               <div>
-                <h1 className="page-title" style={{ fontSize: '32px', fontWeight: '800', letterSpacing: '-0.02em', marginBottom: '4px' }}>My Dashboard</h1>
+                <h1 className='page-title' style={{ fontSize: '32px', fontWeight: '800', letterSpacing: '-0.02em', marginBottom: '4px' }}>My Dashboard</h1>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
                   <span style={{ fontSize: '12px', color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.05em', fontWeight: '600' }}>Total Saldo</span>
                   <span style={{ fontSize: '28px', fontWeight: '800', color: '#10b981', letterSpacing: '-0.02em' }}>
@@ -428,111 +585,81 @@ export default function DashboardPage() {
               </div>
               
               <div style={{ display: 'flex', gap: '8px', alignSelf: 'flex-end' }}>
-                <button className="btn btn-secondary btn-sm" onClick={() => setShowScanner(true)} style={{ borderRadius: '16px', fontSize: '12px', padding: '8px 16px', display: 'flex', alignItems: 'center', gap: '6px' }}>
-                  <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
-                    <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z" />
-                    <circle cx="12" cy="13" r="4" />
+                <button className='btn btn-secondary btn-sm' onClick={() => setShowScanner(true)} style={{ borderRadius: '16px', fontSize: '12px', padding: '8px 16px', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                  <svg viewBox='0 0 24 24' width='15' height='15' fill='none' stroke='currentColor' strokeWidth='2.2' strokeLinecap='round' strokeLinejoin='round'>
+                    <path d='M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z' />
+                    <circle cx='12' cy='13' r='4' />
                   </svg>
                   Scan Struk
                 </button>
-                <button className="btn btn-primary btn-sm" onClick={() => setShowForm(true)} style={{ borderRadius: '16px', fontSize: '12px', padding: '8px 16px', display: 'flex', alignItems: 'center', gap: '6px', fontWeight: '700' }}>
-                  <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-                    <line x1="12" y1="5" x2="12" y2="19" />
-                    <line x1="5" y1="12" x2="19" y2="12" />
+                <button className='btn btn-primary btn-sm' onClick={() => setShowForm(true)} style={{ borderRadius: '16px', fontSize: '12px', padding: '8px 16px', display: 'flex', alignItems: 'center', gap: '6px', fontWeight: '700' }}>
+                  <svg viewBox='0 0 24 24' width='15' height='15' fill='none' stroke='currentColor' strokeWidth='2.5' strokeLinecap='round' strokeLinejoin='round'>
+                    <line x1='12' y1='5' x2='12' y2='19' />
+                    <line x1='5' y1='12' x2='19' y2='12' />
                   </svg>
                   Transaksi
                 </button>
               </div>
             </div>
+          </div>
 
+          {/* KOLOM KIRI (UTAMA) */}
+          <div className='dashboard-left-col'>
+            
             {/* Revenue Flow Card */}
-            <div className="revenue-flow-card">
-              <div className="chart-header" style={{ marginBottom: '24px' }}>
-                <h3 className="chart-title" style={{ fontSize: '18px', fontWeight: '700' }}>Revenue Flow</h3>
-                <a href="/transactions" className="deck-link" style={{ fontSize: '13px' }}>
-                  View All &gt;
-                </a>
+            <div className='revenue-flow-card'>
+              <div className='chart-header' style={{ marginBottom: '24px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <h3 className='chart-title' style={{ fontSize: '18px', fontWeight: '700' }}>Revenue Flow</h3>
+                <div style={{ display: 'flex', gap: '16px', alignItems: 'center' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '12px', color: 'var(--text-secondary)' }}>
+                    <div style={{ width: '8px', height: '8px', borderRadius: '50%', background: 'var(--color-income)' }} />
+                    Masuk
+                  </div>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '12px', color: 'var(--text-secondary)' }}>
+                    <div style={{ width: '8px', height: '8px', borderRadius: '50%', background: 'var(--color-expense)' }} />
+                    Keluar
+                  </div>
+                  <a href='/transactions' className='deck-link' style={{ fontSize: '13px', marginLeft: '8px' }}>
+                    View All &gt;
+                  </a>
+                </div>
               </div>
 
-              {/* Monthly patterned bar chart matching fintech mockup */}
-              <div style={{ display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between', height: '200px', padding: '0 10px', gap: '16px' }}>
+              {/* Monthly side-by-side bar chart */}
+              <div className='chart-bars' style={{ height: '220px', padding: '0 8px', marginTop: '16px' }}>
                 {(summary?.monthlyData || []).map((item, idx) => {
-                  const maxVal = Math.max(...(summary?.monthlyData || []).map(d => Math.max(d.income, d.expense)), 1);
-                  const incomeHeight = (item.income / maxVal) * 100;
-                  const expenseHeight = (item.expense / maxVal) * 100;
-                  const netValue = item.income - item.expense;
-                  const height = Math.max((Math.abs(netValue) / maxVal) * 80, 10);
-                  
-                  // Highlight July / index 4 (or current active selection) in solid purple, others in patterned teal
-                  const isActive = idx === 4; 
-                  
+                  const maxVal = Math.max(
+                    ...((summary?.monthlyData || []).map(d => Math.max(d.income, d.expense))),
+                    1
+                  );
+                  const getBarHeight = (value: number) => {
+                    return Math.max((value / maxVal) * 100, 2);
+                  };
+
                   return (
-                    <div key={idx} style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', height: '100%', justifyContent: 'flex-end', gap: '12px' }}>
-                      <div style={{ 
-                        position: 'relative', 
-                        width: '100%', 
-                        maxHeight: '160px',
-                        height: `${height}%`,
-                        borderRadius: '20px',
-                        overflow: 'visible',
-                        background: isActive 
-                          ? 'var(--accent-primary)' 
-                          : 'rgba(255, 255, 255, 0.08)',
-                        border: isActive 
-                          ? '1px solid var(--accent-primary)' 
-                          : '1px solid rgba(255, 255, 255, 0.08)',
-                        boxShadow: isActive ? '0 10px 20px rgba(139, 92, 246, 0.3)' : 'none',
-                        cursor: 'pointer'
-                      }}
-                      className="revenue-bar-hover"
-                      >
-                        {/* Diagonal stripes pattern for non-active bars */}
-                        {!isActive && (
-                          <div style={{
-                            position: 'absolute',
-                            inset: 0,
-                            borderRadius: '19px',
-                            background: 'repeating-linear-gradient(45deg, rgba(255, 255, 255, 0.1), rgba(255, 255, 255, 0.1) 4px, transparent 4px, transparent 8px)'
-                          }} />
-                        )}
-
-                        {/* Top Indicator Dot for active month */}
-                        {isActive && (
-                          <div style={{
-                            position: 'absolute',
-                            top: '12px',
-                            left: '50%',
-                            transform: 'translateX(-50%)',
-                            width: '8px',
-                            height: '8px',
-                            borderRadius: '50%',
-                            background: '#ffffff'
-                          }} />
-                        )}
-
-                        {/* Active hover indicator popup tooltip */}
-                        {isActive && (
-                          <div style={{
-                            position: 'absolute',
-                            top: '-36px',
-                            left: '50%',
-                            transform: 'translateX(-50%)',
-                            background: 'var(--bg-secondary)',
-                            border: '1px solid var(--border-color)',
-                            borderRadius: '12px',
-                            padding: '4px 10px',
-                            fontSize: '11px',
-                            fontWeight: 'bold',
-                            whiteSpace: 'nowrap',
-                            boxShadow: '0 4px 10px rgba(0,0,0,0.3)',
-                            color: 'var(--text-primary)'
-                          }}>
-                            +{formatRupiah(netValue).replace('Rp ', 'Rp')}
+                    <div key={idx} className='chart-bar-group'>
+                      <div className='chart-bar-wrapper'>
+                        {/* Income Bar */}
+                        <div
+                          className='chart-bar income'
+                          style={{ height: `${getBarHeight(item.income)}%` }}
+                        >
+                          <div className='chart-bar-tooltip'>
+                            ↑ {formatRupiah(item.income).replace('Rp ', 'Rp')}
                           </div>
-                        )}
+                        </div>
+                        
+                        {/* Expense Bar */}
+                        <div
+                          className='chart-bar expense'
+                          style={{ height: `${getBarHeight(item.expense)}%` }}
+                        >
+                          <div className='chart-bar-tooltip'>
+                            ↓ {formatRupiah(item.expense).replace('Rp ', 'Rp')}
+                          </div>
+                        </div>
                       </div>
-                      
-                      <span style={{ fontSize: '12px', fontWeight: '600', opacity: 0.6 }}>
+                      <span className='chart-bar-label' style={{ marginTop: '8px' }}>
                         {getMonthName(item.month - 1).slice(0, 3)}
                       </span>
                     </div>
@@ -541,7 +668,6 @@ export default function DashboardPage() {
               </div>
             </div>
 
-            {/* Bottom Row: Available & Summaries */}
             <div className="dashboard-bottom-grid">
               
               {/* Card: Available categories */}
@@ -640,14 +766,75 @@ export default function DashboardPage() {
                   </div>
                 </div>
 
-                <div className="summary-widget-card">
-                  <span className="summary-widget-title">Pengeluaran Bulan Ini</span>
-                  <span className="summary-widget-value" style={{ color: 'var(--color-expense)' }}>
+                <div className='summary-widget-card'>
+                  <span className='summary-widget-title'>Pengeluaran Bulan Ini</span>
+                  <span className='summary-widget-value' style={{ color: 'var(--color-expense)' }}>
                     {formatRupiah(summary?.totalExpense || 0).replace('Rp ', 'Rp')}
                   </span>
-                  <span className="summary-widget-subtitle">Periode {getMonthName(month - 1)} {year}</span>
-                  <div className="summary-widget-badge expense">
+                  <span className='summary-widget-subtitle'>Periode {getMonthName(month - 1)} {year}</span>
+                  <div className='summary-widget-badge expense'>
                     +9%
+                  </div>
+                </div>
+
+                {/* Batas Pengeluaran Card */}
+                <div className='summary-widget-card' style={{ cursor: 'pointer' }} onClick={() => setShowLimitsModal(true)}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
+                    <span className='summary-widget-title' style={{ margin: 0 }}>Batas Pengeluaran</span>
+                    <button 
+                      className='btn-ghost' 
+                      onClick={(e) => { e.stopPropagation(); setShowLimitsModal(true); }}
+                      style={{ padding: '2px 6px', display: 'flex', alignItems: 'center', borderRadius: '4px' }}
+                      title='Atur Batas'
+                    >
+                      <svg viewBox='0 0 24 24' width='14' height='14' fill='none' stroke='currentColor' strokeWidth='2.2' strokeLinecap='round' strokeLinejoin='round' style={{ opacity: 0.8 }}><path d='M12 20h9' /><path d='M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z' /></svg>
+                    </button>
+                  </div>
+
+                  {/* Weekly Progress */}
+                  <div style={{ marginBottom: '12px' }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '12px', marginBottom: '4px' }}>
+                      <span style={{ opacity: 0.8 }}>Mingguan</span>
+                      <strong>
+                        {weeklyLimit ? `${formatRupiah(totalWeeklyExpense).replace('Rp ', 'Rp')} / ${formatRupiah(weeklyLimit).replace('Rp ', 'Rp')}` : 'Belum diatur'}
+                      </strong>
+                    </div>
+                    {weeklyLimit ? (
+                      <div className='limit-progress-bar-bg'>
+                        <div 
+                          className='limit-progress-bar-fill'
+                          style={{
+                            width: `${Math.min((totalWeeklyExpense / weeklyLimit) * 100, 100)}%`,
+                            backgroundColor: (totalWeeklyExpense / weeklyLimit) >= 1 ? 'var(--color-expense)' : (totalWeeklyExpense / weeklyLimit) >= 0.8 ? 'var(--color-warning)' : 'var(--color-income)'
+                          }}
+                        />
+                      </div>
+                    ) : (
+                      <div className='limit-setup-link'>Tap untuk atur batas mingguan</div>
+                    )}
+                  </div>
+
+                  {/* Monthly Progress */}
+                  <div>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '12px', marginBottom: '4px' }}>
+                      <span style={{ opacity: 0.8 }}>Bulanan</span>
+                      <strong>
+                        {monthlyLimit ? `${formatRupiah(summary?.totalExpense || 0).replace('Rp ', 'Rp')} / ${formatRupiah(monthlyLimit).replace('Rp ', 'Rp')}` : 'Belum diatur'}
+                      </strong>
+                    </div>
+                    {monthlyLimit ? (
+                      <div className='limit-progress-bar-bg'>
+                        <div 
+                          className='limit-progress-bar-fill'
+                          style={{
+                            width: `${Math.min(((summary?.totalExpense || 0) / monthlyLimit) * 100, 100)}%`,
+                            backgroundColor: ((summary?.totalExpense || 0) / monthlyLimit) >= 1 ? 'var(--color-expense)' : ((summary?.totalExpense || 0) / monthlyLimit) >= 0.8 ? 'var(--color-warning)' : 'var(--color-income)'
+                          }}
+                        />
+                      </div>
+                    ) : (
+                      <div className='limit-setup-link'>Tap untuk atur batas bulanan</div>
+                    )}
                   </div>
                 </div>
               </div>
@@ -992,6 +1179,76 @@ export default function DashboardPage() {
               </button>
               <button className="btn btn-primary" onClick={handleAddAccount} disabled={accountLoading}>
                 {accountLoading ? <span className="loading-spinner" /> : 'Tambah'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Limits Form Modal */}
+      {showLimitsModal && (
+        <div className='modal-overlay' onClick={() => setShowLimitsModal(false)}>
+          <div className='modal' style={{ maxWidth: '400px' }} onClick={(e) => e.stopPropagation()}>
+            <div className='modal-header'>
+              <h2 className='modal-title'>Atur Batas Pengeluaran</h2>
+              <button className='modal-close' onClick={() => setShowLimitsModal(false)}>✕</button>
+            </div>
+            
+            <div className='modal-body'>
+              {limitFormError && (
+                <div className='login-error' style={{ marginBottom: 16, display: 'flex', alignItems: 'center', gap: '6px' }}>
+                  <svg viewBox='0 0 24 24' width='16' height='16' fill='none' stroke='currentColor' strokeWidth='2.5' strokeLinecap='round' strokeLinejoin='round' style={{ flexShrink: 0 }}><path d='M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z' /><line x1='12' y1='9' x2='12' y2='13' /><line x1='12' y1='17' x2='12.01' y2='17' /></svg>
+                  {limitFormError}
+                </div>
+              )}
+
+              <p style={{ fontSize: '13px', color: 'var(--text-secondary)', marginBottom: '16px', lineHeight: '1.4' }}>
+                Atur batas pengeluaran Anda untuk memantau pengeluaran mingguan dan bulanan. Kami akan menampilkan peringatan jika pengeluaran Anda mencapai 80% dan 100% dari batas yang diatur.
+              </p>
+
+              <div className='form-group'>
+                <label className='form-label'>Batas Mingguan (Rp)</label>
+                <div className='form-input-icon-wrapper'>
+                  <span className='form-input-icon'>Rp</span>
+                  <input
+                    type='number'
+                    className='form-input'
+                    placeholder='Contoh: 1000000 (kosongkan jika tidak dibatasi)'
+                    value={inputWeeklyLimit}
+                    onChange={(e) => setInputWeeklyLimit(e.target.value)}
+                    min='0'
+                    step='10000'
+                  />
+                </div>
+              </div>
+
+              <div className='form-group'>
+                <label className='form-label'>Batas Bulanan (Rp)</label>
+                <div className='form-input-icon-wrapper'>
+                  <span className='form-input-icon'>Rp</span>
+                  <input
+                    type='number'
+                    className='form-input'
+                    placeholder='Contoh: 4000000 (kosongkan jika tidak dibatasi)'
+                    value={inputMonthlyLimit}
+                    onChange={(e) => setInputMonthlyLimit(e.target.value)}
+                    min='0'
+                    step='50000'
+                  />
+                </div>
+              </div>
+            </div>
+
+            <div className='modal-footer'>
+              <button className='btn btn-secondary' onClick={() => setShowLimitsModal(false)}>
+                Batal
+              </button>
+              <button
+                className='btn btn-primary'
+                onClick={handleSaveLimits}
+                disabled={limitFormLoading}
+              >
+                {limitFormLoading ? <span className='loading-spinner' /> : 'Simpan'}
               </button>
             </div>
           </div>

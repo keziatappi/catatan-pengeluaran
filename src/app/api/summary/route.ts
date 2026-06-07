@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/db/db';
-import { transactions } from '@/db/schema';
+import { transactions, users } from '@/db/schema';
 import { eq, and, sql, gte, lte } from 'drizzle-orm';
 
 function getUserId(request: NextRequest): number | null {
@@ -103,6 +103,45 @@ export async function GET(request: NextRequest) {
       });
     }
 
+    // Get start of current week (Monday)
+    const now = new Date();
+    const day = now.getDay();
+    const diff = now.getDate() - day + (day === 0 ? -6 : 1);
+    const monday = new Date(now.setDate(diff));
+    const startOfWeekStr = `${monday.getFullYear()}-${String(monday.getMonth() + 1).padStart(2, '0')}-${String(monday.getDate()).padStart(2, '0')}`;
+
+    const today = new Date();
+    const todayStr = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
+
+    // Get weekly expense
+    const weeklyTotals = await db
+      .select({
+        total: sql<string>`COALESCE(SUM(${transactions.amount}::numeric), 0)`,
+      })
+      .from(transactions)
+      .where(
+        and(
+          eq(transactions.userId, userId),
+          eq(transactions.type, 'expense'),
+          gte(transactions.date, startOfWeekStr),
+          lte(transactions.date, todayStr)
+        )
+      );
+    const totalWeeklyExpense = parseFloat(weeklyTotals[0]?.total || '0');
+
+    // Get user limits
+    const userLimits = await db
+      .select({
+        weeklyLimit: users.weeklyLimit,
+        monthlyLimit: users.monthlyLimit,
+      })
+      .from(users)
+      .where(eq(users.id, userId))
+      .limit(1);
+
+    const weeklyLimit = userLimits[0]?.weeklyLimit ? parseFloat(userLimits[0].weeklyLimit) : null;
+    const monthlyLimit = userLimits[0]?.monthlyLimit ? parseFloat(userLimits[0].monthlyLimit) : null;
+
     return NextResponse.json({
       month,
       year,
@@ -111,6 +150,9 @@ export async function GET(request: NextRequest) {
       balance: totalIncome - totalExpense,
       dailyData,
       monthlyData,
+      totalWeeklyExpense,
+      weeklyLimit,
+      monthlyLimit,
     });
   } catch (error) {
     console.error('Error fetching summary:', error);
