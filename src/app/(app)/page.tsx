@@ -281,8 +281,9 @@ export default function DashboardPage() {
   const fetchData = useCallback(async () => {
     setLoading(true);
     try {
+      const todayStr = new Date().toLocaleDateString('sv-SE');
       const [summaryRes, txRes, accountsRes, userRes] = await Promise.all([
-        fetch(`/api/summary?month=${month}&year=${year}`),
+        fetch(`/api/summary?month=${month}&year=${year}&today=${todayStr}`),
         fetch(`/api/transactions?limit=8`),
         fetch('/api/accounts'),
         fetch('/api/auth/me'),

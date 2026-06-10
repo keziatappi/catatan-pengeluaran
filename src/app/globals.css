@@ -164,6 +164,7 @@ ul, ol {
   margin-left: var(--sidebar-width);
   min-height: 100vh;
   position: relative;
+  min-width: 0;
 }
 
 .page-container {
@@ -1685,14 +1686,41 @@ ul, ol {
     font-size: 16px;
   }
 
-  /* Transaction actions always visible on touch */
-  .transaction-actions {
-    opacity: 1;
+  /* Transaction actions grid layout for mobile */
+  .transaction-item {
+    display: grid;
+    grid-template-columns: 44px 1fr auto;
+    grid-template-rows: auto auto;
+    gap: 6px 12px;
+    padding: 12px 14px;
+    align-items: center;
+    min-width: 0;
+    width: 100%;
   }
 
-  .transaction-item {
-    gap: 12px;
-    padding: 12px 14px;
+  .transaction-icon {
+    grid-column: 1;
+    grid-row: 1 / span 2;
+  }
+
+  .transaction-info {
+    grid-column: 2;
+    grid-row: 1 / span 2;
+    min-width: 0;
+  }
+
+  .transaction-right {
+    grid-column: 3;
+    grid-row: 1;
+    text-align: right;
+  }
+
+  .transaction-actions {
+    grid-column: 3;
+    grid-row: 2;
+    display: flex;
+    justify-content: flex-end;
+    opacity: 1;
   }
 
   /* Chart bars */

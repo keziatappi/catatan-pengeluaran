@@ -103,15 +103,22 @@ export async function GET(request: NextRequest) {
       });
     }
 
-    // Get start of current week (Monday)
-    const now = new Date();
-    const day = now.getDay();
-    const diff = now.getDate() - day + (day === 0 ? -6 : 1);
-    const monday = new Date(now.setDate(diff));
+    // Get start and end of current week (Monday to Sunday) based on client local time or server fallback
+    const todayParam = searchParams.get('today');
+    let referenceDate = new Date();
+    if (todayParam) {
+      const [y, m, d] = todayParam.split('-').map(Number);
+      referenceDate = new Date(y, m - 1, d);
+    }
+
+    const day = referenceDate.getDay();
+    const diff = referenceDate.getDate() - day + (day === 0 ? -6 : 1);
+    const monday = new Date(referenceDate.getFullYear(), referenceDate.getMonth(), diff);
     const startOfWeekStr = `${monday.getFullYear()}-${String(monday.getMonth() + 1).padStart(2, '0')}-${String(monday.getDate()).padStart(2, '0')}`;
 
-    const today = new Date();
-    const todayStr = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
+    const sunday = new Date(monday);
+    sunday.setDate(monday.getDate() + 6);
+    const endOfWeekStr = `${sunday.getFullYear()}-${String(sunday.getMonth() + 1).padStart(2, '0')}-${String(sunday.getDate()).padStart(2, '0')}`;
 
     // Get weekly expense
     const weeklyTotals = await db
@@ -124,7 +131,7 @@ export async function GET(request: NextRequest) {
           eq(transactions.userId, userId),
           eq(transactions.type, 'expense'),
           gte(transactions.date, startOfWeekStr),
-          lte(transactions.date, todayStr)
+          lte(transactions.date, endOfWeekStr)
         )
       );
     const totalWeeklyExpense = parseFloat(weeklyTotals[0]?.total || '0');
