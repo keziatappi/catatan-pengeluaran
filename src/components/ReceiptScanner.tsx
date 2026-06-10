@@ -29,6 +29,45 @@ interface ReceiptScannerProps {
   onSaved: () => void;
 }
 
+const compressImage = (dataUrl: string, maxWidth = 1024, maxHeight = 1024): Promise<string> => {
+  return new Promise((resolve) => {
+    const img = new Image();
+    img.src = dataUrl;
+    img.onload = () => {
+      let width = img.width;
+      let height = img.height;
+
+      if (width > height) {
+        if (width > maxWidth) {
+          height = Math.round((height * maxWidth) / width);
+          width = maxWidth;
+        }
+      } else {
+        if (height > maxHeight) {
+          width = Math.round((width * maxHeight) / height);
+          height = maxHeight;
+        }
+      }
+
+      const canvas = document.createElement('canvas');
+      canvas.width = width;
+      canvas.height = height;
+
+      const ctx = canvas.getContext('2d');
+      if (!ctx) {
+        resolve(dataUrl);
+        return;
+      }
+
+      ctx.drawImage(img, 0, 0, width, height);
+      resolve(canvas.toDataURL('image/jpeg', 0.8));
+    };
+    img.onerror = () => {
+      resolve(dataUrl);
+    };
+  });
+};
+
 export default function ReceiptScanner({
   isOpen,
   onClose,
@@ -104,9 +143,16 @@ export default function ReceiptScanner({
     }
 
     const reader = new FileReader();
-    reader.onload = () => {
-      setImage(reader.result as string);
-      setError('');
+    reader.onload = async () => {
+      const rawImage = reader.result as string;
+      try {
+        const compressed = await compressImage(rawImage);
+        setImage(compressed);
+        setError('');
+      } catch {
+        setImage(rawImage);
+        setError('');
+      }
     };
     reader.onerror = () => {
       setError('Gagal membaca file gambar');

@@ -80,65 +80,98 @@ Berikan respons Anda dalam format JSON dengan struktur berikut:
 Pastikan Anda hanya mengembalikan JSON yang valid tanpa teks tambahan.
 `;
 
-    const response = await fetch(
-      `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${apiKey}`,
-      {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          contents: [
-            {
-              parts: [
+    const modelsToTry = [
+      'gemini-2.5-flash',
+      'gemini-3.5-flash',
+      'gemini-flash-latest'
+    ];
+
+    let response: Response | null = null;
+    let lastError: any = null;
+
+    for (const model of modelsToTry) {
+      try {
+        console.log(`Trying model: ${model}`);
+        response = await fetch(
+          `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`,
+          {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+              contents: [
                 {
-                  text: prompt,
-                },
-                {
-                  inlineData: {
-                    mimeType: mimeType,
-                    data: base64Data,
-                  },
+                  parts: [
+                    {
+                      text: prompt,
+                    },
+                    {
+                      inlineData: {
+                        mimeType: mimeType,
+                        data: base64Data,
+                      },
+                    },
+                  ],
                 },
               ],
-            },
-          ],
-          generationConfig: {
-            responseMimeType: 'application/json',
-            responseSchema: {
-              type: 'OBJECT',
-              properties: {
-                merchant: { type: 'STRING' },
-                date: { type: 'STRING', description: 'Format YYYY-MM-DD' },
-                totalAmount: { type: 'NUMBER' },
-                items: {
-                  type: 'ARRAY',
-                  items: {
-                    type: 'OBJECT',
-                    properties: {
-                      name: { type: 'STRING' },
-                      price: { type: 'NUMBER' },
+              generationConfig: {
+                responseMimeType: 'application/json',
+                responseSchema: {
+                  type: 'OBJECT',
+                  properties: {
+                    merchant: { type: 'STRING' },
+                    date: { type: 'STRING', description: 'Format YYYY-MM-DD' },
+                    totalAmount: { type: 'NUMBER' },
+                    items: {
+                      type: 'ARRAY',
+                      items: {
+                        type: 'OBJECT',
+                        properties: {
+                          name: { type: 'STRING' },
+                          price: { type: 'NUMBER' },
+                        },
+                        required: ['name', 'price'],
+                      },
                     },
-                    required: ['name', 'price'],
+                    suggestedCategoryId: {
+                      type: 'INTEGER',
+                      description: 'ID kategori yang paling cocok',
+                    },
                   },
-                },
-                suggestedCategoryId: {
-                  type: 'INTEGER',
-                  description: 'ID kategori yang paling cocok',
+                  required: ['merchant', 'date', 'totalAmount', 'items', 'suggestedCategoryId'],
                 },
               },
-              required: ['merchant', 'date', 'totalAmount', 'items', 'suggestedCategoryId'],
-            },
-          },
-        }),
-      }
-    );
+            }),
+          }
+        );
 
-    if (!response.ok) {
-      const errorText = await response.text();
-      console.error('Gemini API Error Response:', errorText);
+        if (response.ok) {
+          console.log(`Model ${model} succeeded!`);
+          break;
+        } else {
+          const status = response.status;
+          const statusText = response.statusText;
+          const errorText = await response.text();
+          console.warn(`Model ${model} failed with status ${status} (${statusText}): ${errorText}`);
+          
+          let parsedError = statusText;
+          try {
+            const errJson = JSON.parse(errorText);
+            parsedError = errJson.error?.message || statusText;
+          } catch {}
+          
+          lastError = new Error(`${parsedError} (${status})`);
+        }
+      } catch (err: any) {
+        console.warn(`Error calling model ${model}:`, err);
+        lastError = err;
+      }
+    }
+
+    if (!response || !response.ok) {
       return NextResponse.json(
-        { error: `Gagal memproses gambar dengan Gemini API: ${response.statusText}` },
+        { error: `Gagal memproses gambar dengan Gemini API: ${lastError?.message || 'Unknown error'}` },
         { status: 500 }
       );
     }
